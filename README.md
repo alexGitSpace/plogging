@@ -25,7 +25,7 @@ Each part talks only to the API, never to another part, through the [contract](c
 | [contract/](contract/) | The event format that all parts share |
 | [api/](api/) | Receives events, puts picks on the route, computes stats |
 | [web/](web/) | What people see: outings, stats, leaderboard |
-| [grabber/](grabber/) | Recognises a pick on the Arduino UNO Q |
+| [grabber/](grabber/) | Recognises a pick and, with its camera, the type of litter, on the Arduino UNO Q |
 | [glasses/](glasses/) | Spots litter and recognises its type with Meta glasses |
 
 ## Run it

@@ -123,3 +123,10 @@ def test_page(client):
     res = client.get("/")
     assert res.status_code == 200
     assert "api/events" in res.text
+
+
+def test_record_page(client):
+    res = client.get("/record")
+    assert res.status_code == 200
+    assert "/api/events" in res.text
+    assert "session.start" in res.text

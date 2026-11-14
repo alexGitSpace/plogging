@@ -45,6 +45,7 @@ Every deploy stops the API for a few seconds: Railway never runs two copies of a
 | `GET /api/outings/{session_id}` | One outing with its route, picks and pinned spots |
 | `GET /api/leaderboard` | Users by picks; filter `since` |
 | `GET /` | A page with the latest 50 events, refreshed every 2 seconds |
+| `GET /record` | A phone page that records an outing: see below |
 | `GET /docs` | OpenAPI docs |
 
 How the API reads the contract:
@@ -56,6 +57,17 @@ How the API reads the contract:
 - A request that is not `{"events": [...]}` with up to 100 items gets `422` and stores nothing.
 - A request body over 1 MB gets `413` and stores nothing. An hour of track at one point per second takes about 250 kB.
 - No authentication yet: anyone who knows the URL can post events.
+
+## Recording an outing
+
+`/record` on the API is the phone's part of the contract: open it in the phone's browser, enter a nickname, choose plogger or scout and the devices on this outing, and press Start. It sends `session.start`, the GPS track as `track.points` every 5 seconds, and `session.end` on Finish (tap twice).
+
+- The API serves it so that it gets the API's HTTPS, which browsers require for the location, and needs no API address.
+- Events wait in the browser until the API accepts them and keep their `event_id` when resent: a lost connection or a reloaded page loses nothing, and a reload carries the outing on.
+- It asks the phone to keep the screen on. Phones stop reporting the location when the screen locks, so keep the page open.
+- The web app can link to it as `{API_URL}/record?user=<nickname>` to fill in the nickname.
+- `/record?fake` makes up a walk around Otaniemi instead of reading the GPS, to try it indoors. Its outings are real outings in the API: use a test nickname.
+- The phone's `device_id` is `phone-` and 8 random characters, kept in the browser.
 
 ## Simulator
 

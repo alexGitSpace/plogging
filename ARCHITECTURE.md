@@ -23,7 +23,7 @@ Every part talks only to the API. The events and the read endpoints are in the [
 | Simulator | `api/sim.py` | Sends made-up or recorded outings, for the demo without hardware | Done |
 | Grabber | `grabber/` | Recognises a pick and sends `pick` | Nothing pushed yet |
 | Glasses app | `glasses/` | Streams the glasses camera to the phone, runs YOLO, sends `sighting` with the phone's location | PR #1 (iOS) and #2 (Android): detection on screen, no sending yet |
-| Outing recorder | ? | Starts and ends the outing, sends the GPS track | No owner |
+| Outing recorder | `api/` (`/record`) | A phone web page: starts and ends the outing, sends the GPS track | Done, try it on a real walk |
 | Web app | `web/` | Map, outings, stats, leaderboard, live screen | Shell done: router, API client, maps; screens are placeholders |
 | Zones | `api/` | Pollution by area on the map: low, medium, high | Not started |
 
@@ -47,5 +47,5 @@ Computing it in the API needs a new endpoint, for example `GET /api/zones`: a co
 
 1. **Linking a sighting to a pick.** A spot seen once may be hard to match to the item picked up later. Today the API cleans the nearest open spot within 30 m of a pick. That is right for the demo, but not for a dense area. Zones make this matter less: the map does not claim which item was picked.
 2. **A pick has no GPS.** The grabber has no GPS, but the API puts each pick on the outing's route by time, so a pick has a position as accurate as the phone's GPS, about 5–15 m. This needs the grabber's clock to be in sync and the grabber to be listed in the outing's `device_ids`.
-3. **Who records the outing** (`session.start`, `track.points`, `session.end`) if the web app is desktop only? Options: the glasses app, which already runs on the phone, or a small mobile web page. Without it, picks have no route to land on.
+3. **Who records the outing**: decided, a phone page served by the API at `/record`. It needs the phone's screen on during the walk.
 4. **Zones**: in the API or in the web app (see above).

@@ -1,4 +1,4 @@
-"""Plogging API stub: POST /api/events, GET /api/events and a page with the latest events."""
+"""Plogging API: events in, outings and spots out, a page of the latest events and a page that records an outing."""
 
 import os
 import time
@@ -19,6 +19,7 @@ from app.store import Store
 MAX_BATCH = 100
 MAX_BODY_BYTES = 1_000_000  # An hour of track at one point per second takes about a quarter of it
 PAGE = Path(__file__).with_name("page.html")
+RECORD_PAGE = Path(__file__).with_name("record.html")
 
 
 class BodySizeLimit:
@@ -102,6 +103,11 @@ def create_app(db_path: str) -> FastAPI:
     @app.get("/", response_class=HTMLResponse, include_in_schema=False)
     def page() -> str:
         return PAGE.read_text()
+
+    # The phone records an outing here. Served by the API to get its HTTPS (the location needs it) and origin.
+    @app.get("/record", response_class=HTMLResponse, include_in_schema=False)
+    def record_page() -> str:
+        return RECORD_PAGE.read_text()
 
     return app
 

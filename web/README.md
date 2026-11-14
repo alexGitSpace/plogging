@@ -59,7 +59,7 @@ What the API does not have, and how the mockup's parts map onto it:
 - **Place names** ("Leppävaara, Espoo"): static text, or reverse geocoding in the app.
 - **Litter photos**: an icon by `litter_type`.
 - **"Grabber connected", "glasses ready"**: the API does not know device connections; static text.
-- **Starting an outing**: recording the route is a separate page (in progress); the start button links to it.
+- **Starting an outing**: the phone records it on a page the API serves; the start button links to `{API_URL}/record?user=<nickname>` ([api/README.md](../api/README.md#recording-an-outing)).
 
 ### Pollution zones
 

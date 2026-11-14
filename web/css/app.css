@@ -92,11 +92,12 @@ h1, h2, h3, p { margin: 0; }
 
 @media (max-width: 760px) {
   :root { --sidebar: 0px; }
-  .sidebar { inset: auto 0 0 0; width: auto; height: 64px; flex-direction: row; padding: 8px; border-right: 0; border-top: 1px solid var(--line); }
+  /* env(safe-area-inset-*) keeps the bar above the iPhone home indicator (needs viewport-fit=cover in index.html) */
+  .sidebar { inset: auto 0 0 0; width: auto; height: calc(64px + env(safe-area-inset-bottom)); flex-direction: row; padding: 8px 8px calc(8px + env(safe-area-inset-bottom)); border-right: 0; border-top: 1px solid var(--line); }
   .brand, .sidebar-foot { display: none; }
   .nav { flex-direction: row; flex: 1; justify-content: space-around; }
   .nav a { flex-direction: column; gap: 2px; font-size: 11px; padding: 4px 8px; }
-  .view { padding: 20px 16px 88px; }
-  .view-map, .view-outing { height: calc(100vh - 64px); padding: 0; }
+  .view { padding: calc(20px + env(safe-area-inset-top)) 16px calc(88px + env(safe-area-inset-bottom)); }
+  .view-map, .view-outing { height: calc(100dvh - 64px - env(safe-area-inset-bottom)); padding: 0; }
   .grid-2, .grid-3 { grid-template-columns: 1fr; }
 }

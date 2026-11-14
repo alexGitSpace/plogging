@@ -83,6 +83,15 @@ def test_fields_outside_the_contract_are_dropped(client):
     assert "secret" not in stored and "confidence" not in stored
 
 
+def test_pick_keeps_a_known_litter_type_and_drops_an_unknown_one(client):
+    typed, raw_label, untyped = pick(litter_type="can"), pick(litter_type="water bottle"), pick()
+    res = client.post("/api/events", json={"events": [typed, raw_label, untyped]}).json()
+    assert res == {"accepted": [typed["event_id"], raw_label["event_id"], untyped["event_id"]], "rejected": []}
+    stored = {e["event_id"]: e for e in client.get("/api/events").json()["events"]}
+    assert stored[typed["event_id"]]["litter_type"] == "can"
+    assert "litter_type" not in stored[raw_label["event_id"]] and "litter_type" not in stored[untyped["event_id"]]
+
+
 def test_more_than_100_events_is_refused(client):
     res = client.post("/api/events", json={"events": [pick() for _ in range(101)]})
     assert res.status_code == 422

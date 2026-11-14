@@ -2,7 +2,7 @@
 
 import time
 import uuid
-from typing import Annotated, Any, Literal
+from typing import Annotated, Any, Literal, get_args
 
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, ValidationError, field_validator
 
@@ -61,7 +61,14 @@ class TrackPoints(_Event):
 
 
 class Pick(_Event):
-    type: Literal["pick"]  # The grabber only reports that it picked something
+    type: Literal["pick"]
+    litter_type: LitterType | None = None  # What the grabber's camera recognised, if anything
+
+    @field_validator("litter_type", mode="before")
+    @classmethod
+    def _known_type_or_none(cls, v: Any) -> Any:
+        # A pick counts even with a type outside the list (such as a raw model label): only the type is dropped.
+        return v if v in get_args(LitterType) else None
 
 
 class Sighting(_Event):
@@ -106,4 +113,5 @@ def parse_event(raw: Any, now_ms: int | None = None) -> tuple[dict | None, str |
     now_ms = now_ms if now_ms is not None else int(time.time() * 1000)
     if event.t is None or not (EARLIEST_T <= event.t <= now_ms + MAX_FUTURE_MS):
         event.t = now_ms
-    return event.model_dump(mode="json"), None
+    # No null fields: a pick without a type is stored as it was sent.
+    return event.model_dump(mode="json", exclude_none=True), None

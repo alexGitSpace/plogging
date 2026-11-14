@@ -1,4 +1,4 @@
-// Map: open litter spots for now. Clusters, zones, Plogger / Scout and the bottom card come in step 2 of PLAN.md.
+// Map: open litter spots for now. Clusters, zones, Plogger / Scout and the bottom card are in web/README.md, "Screens".
 
 import { api } from "../api.js";
 import { esc, LITTER, ago } from "../ui.js";

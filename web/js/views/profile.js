@@ -1,4 +1,4 @@
-// Profile: placeholder until step 4 in PLAN.md.
+// Profile: placeholder; what goes here is in web/README.md, "Screens".
 
 import { api, currentUser } from "../api.js";
 import { esc, failed, initials, loading } from "../ui.js";

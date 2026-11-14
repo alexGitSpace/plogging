@@ -1,4 +1,4 @@
-// Leaderboard: placeholder until step 3 in PLAN.md.
+// Leaderboard: placeholder; what goes here is in web/README.md, "Screens".
 
 import { api, currentUser, weekStart } from "../api.js";
 import { failed, loading } from "../ui.js";

@@ -24,7 +24,7 @@ Every part talks only to the API. The events and the read endpoints are in the [
 | Grabber | `grabber/` | Recognises a pick and sends `pick` | Nothing pushed yet |
 | Glasses app | `glasses/` | Streams the glasses camera to the phone, runs YOLO, sends `sighting` with the phone's location | PR #1 (iOS) and #2 (Android): detection on screen, no sending yet |
 | Outing recorder | ? | Starts and ends the outing, sends the GPS track | No owner |
-| Web app | `web/` | Map, outings, stats, leaderboard, live screen | Not started |
+| Web app | `web/` | Map, outings, stats, leaderboard, live screen | Shell done: router, API client, maps; screens are placeholders |
 | Zones | `api/` | Pollution by area on the map: low, medium, high | Not started |
 
 ### Web app: front end and back end

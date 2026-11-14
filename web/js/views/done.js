@@ -1,5 +1,5 @@
-// Outing summary ("Challenge complete"): placeholder until step 6 in PLAN.md.
-// The 220x220 box is where the Three.js character goes (js/character.js).
+// Outing summary ("Challenge complete"): placeholder; what goes here is in web/README.md, "Screens".
+// The 220x220 circle is where the animated Three.js character goes ("three" is in the import map of index.html).
 
 import { api } from "../api.js";
 import { esc, failed, km, loading } from "../ui.js";

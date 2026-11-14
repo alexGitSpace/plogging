@@ -1,12 +1,11 @@
-// Live outing: polls the outing every 1.5 s and draws its route and picks.
-// The nearest spot, the "just picked" toast and quest progress come in step 6 of PLAN.md.
+// Live outing: polls the outing and draws its route and picks; stops polling once the outing is over.
+// To do (web/README.md, "Screens"): the nearest spot, the "just picked +10 pts" toast, quest progress, open spots around.
 
-import { api } from "../api.js";
+import { api, poll } from "../api.js";
 import { clock, km } from "../ui.js";
 import { createMap } from "../map.js";
 
 const L = window.L;
-const POLL_MS = 1500;
 
 export default async function render(el, sessionId) {
   el.innerHTML = `<div class="map" id="map"></div>
@@ -16,40 +15,38 @@ export default async function render(el, sessionId) {
       <div><div class="eyebrow">Picked</div><div class="big" id="picked">–</div></div>
     </div>
     <div class="map-overlay" style="left:24px;top:150px"><span class="pill dark" id="state">Loading…</span></div>`;
-  const map = createMap(el.querySelector("#map"), { zoom: 17 });
+  const $ = (sel) => el.querySelector(sel);
+  const map = createMap($("#map"), { zoom: 17 });
   const route = L.polyline([], { color: "#1db35b", weight: 5 }).addTo(map);
   const picks = L.layerGroup().addTo(map);
-  let timer = null;
   let fitted = false;
-  let stopped = false;
 
-  async function tick() {
+  const stop = poll(async () => {
+    let o;
     try {
-      const o = await api.outing(sessionId);
-      if (stopped) return;
-      el.querySelector("#time").textContent = clock(o.stats.duration_s);
-      el.querySelector("#dist").textContent = km(o.stats.distance_m);
-      el.querySelector("#picked").textContent = o.stats.picks;
-      el.querySelector("#state").textContent = o.live ? `Recording · ${o.user_id ?? ""}` : "Finished";
-      route.setLatLngs(o.route);
-      picks.clearLayers();
-      for (const p of o.picks) if (p.lat !== null) L.circleMarker([p.lat, p.lon], { radius: 7, color: "#fff", weight: 2, fillColor: "#141414", fillOpacity: 1 }).addTo(picks);
-      if (o.route.length && !fitted) {
-        map.fitBounds(route.getBounds(), { padding: [80, 80], maxZoom: 17 });
-        fitted = true;
-      }
-      if (o.live) timer = setTimeout(tick, POLL_MS);
+      o = await api.outing(sessionId);
     } catch (err) {
-      if (stopped) return;
-      el.querySelector("#state").textContent = err.message;
-      timer = setTimeout(tick, POLL_MS * 2);
+      $("#state").textContent = err.message;
+      throw err; // poll() retries later
     }
-  }
-  tick();
+    $("#time").textContent = clock(o.stats.duration_s);
+    $("#dist").textContent = km(o.stats.distance_m);
+    $("#picked").textContent = o.stats.picks;
+    $("#state").textContent = o.live ? `Recording · ${o.user_id ?? ""}` : "Finished";
+    route.setLatLngs(o.route);
+    picks.clearLayers();
+    for (const p of o.picks) {
+      if (p.lat !== null) L.circleMarker([p.lat, p.lon], { radius: 7, color: "#fff", weight: 2, fillColor: "#141414", fillOpacity: 1 }).addTo(picks);
+    }
+    if (o.route.length && !fitted) {
+      map.fitBounds(route.getBounds(), { padding: [80, 80], maxZoom: 17 });
+      fitted = true;
+    }
+    return o.live; // false stops polling
+  });
 
   return () => {
-    stopped = true;
-    clearTimeout(timer);
+    stop();
     map.remove();
   };
 }

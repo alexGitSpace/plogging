@@ -1,4 +1,4 @@
-// Feed: placeholder until step 4 in PLAN.md.
+// Feed: placeholder; what goes here is in web/README.md, "Screens".
 
 import { api, currentUser, weekStart } from "../api.js";
 import { esc, failed, loading } from "../ui.js";

@@ -1,4 +1,4 @@
-// Quests: placeholder until step 5 in PLAN.md.
+// Quests: placeholder; what goes here is in web/README.md, "Screens".
 
 import { api, currentUser } from "../api.js";
 import { esc, failed, loading } from "../ui.js";

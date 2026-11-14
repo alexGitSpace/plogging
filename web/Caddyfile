@@ -1,0 +1,12 @@
+# Serves /srv on $PORT (Railway sets it), 8080 otherwise.
+{
+	admin off
+}
+
+:{$PORT:8080} {
+	root * /srv
+	encode gzip
+	# No build step means no hashed file names: make browsers check for a new version on each load.
+	header Cache-Control "no-cache"
+	file_server
+}

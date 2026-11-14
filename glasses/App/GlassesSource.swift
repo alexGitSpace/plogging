@@ -125,10 +125,14 @@ final class GlassesSource {
       try pairMockGlasses { $0.setCameraFeed(cameraFacing: .back) }
     }
 
-    // 1. Wait until some glasses are powered on, unfolded and in range.
-    onStatus("Looking for glasses…")
+    // A phone can have Ray-Ban Meta and Meta Ray-Ban Display connected at once.
+    // Without the filter the selector takes the first pair, and the session
+    // fails on the folded Ray-Ban Meta.
+    onStatus("Looking for Meta Ray-Ban Display…")
     let wearables = Wearables.shared
-    let selector = AutoDeviceSelector(wearables: wearables)
+    let selector = AutoDeviceSelector(wearables: wearables) { device in
+      device.deviceType() == .metaRayBanDisplay
+    }
     for await device in selector.activeDeviceStream() where device != nil { break }
     try Task.checkCancellation()
 

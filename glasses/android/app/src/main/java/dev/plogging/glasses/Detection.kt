@@ -1,0 +1,16 @@
+package dev.plogging.glasses
+
+/**
+ * One object found in a frame. The box is normalised to 0..1 with the origin in the
+ * top-left corner of the frame.
+ */
+data class Detection(
+    /** Class name from the model, such as `bottle`. */
+    val label: String,
+    /** 0 to 1. */
+    val confidence: Float,
+    val left: Float,
+    val top: Float,
+    val right: Float,
+    val bottom: Float,
+)

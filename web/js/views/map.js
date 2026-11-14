@@ -91,17 +91,29 @@ export default async function render(el) {
   const spotLayers = new Map(); // spot_id → marker of an open spot on the map
 
   function vanish(marker) {
-    // The cleaned spot turns into a growing, fading ring, then goes.
-    marker.closePopup().unbindPopup();
-    let step = 0;
-    const timer = setInterval(() => {
-      step++;
-      marker.setStyle({ fillOpacity: 1 - step / 12, opacity: 1 - step / 12 }).setRadius(6 + step * 1.5);
-      if (step >= 12) {
-        clearInterval(timer);
-        marker.remove();
-      }
-    }, 50);
+    // A cleaned spot celebrates: the dot pops into a green check, two ring waves, a burst of leaves and "+10".
+    // The celebration is HTML on top of the map (.pick-fx in app.css), so it can be big and smooth.
+    const at = marker.getLatLng();
+    marker.remove();
+    const leaves = Array.from({ length: 10 }, (_, i) => {
+      const a = (i / 10) * Math.PI * 2 + Math.random() * 0.4;
+      const d = 46 + Math.random() * 30;
+      return `<i class="leaf" style="--x:${(Math.cos(a) * d).toFixed(0)}px;--y:${(Math.sin(a) * d).toFixed(0)}px;--r:${(Math.random() * 360).toFixed(0)}deg;--d:${(Math.random() * 0.12).toFixed(2)}s"></i>`;
+    }).join("");
+    const fx = L.marker(at, {
+      interactive: false,
+      keyboard: false,
+      zIndexOffset: 1000,
+      icon: L.divIcon({
+        className: "pick-fx",
+        iconSize: [0, 0],
+        html: `<i class="wave"></i><i class="wave w2"></i>${leaves}<b class="check">${icon("check", 26)}</b><span class="plus">+${POINTS_PER_ITEM}</span>`,
+      }),
+    }).addTo(map);
+    setTimeout(() => fx.remove(), 1800);
+    try {
+      navigator.vibrate?.([30, 40, 60]); // Android; iPhone browsers do not vibrate
+    } catch {}
   }
 
   async function refreshSpots() {

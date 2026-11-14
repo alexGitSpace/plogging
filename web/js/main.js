@@ -3,6 +3,7 @@
 
 import { api, API_URL, currentUser, setCurrentUser } from "./api.js";
 import { esc, icon } from "./ui.js";
+import { PEOPLE } from "./mock.js";
 
 const TABS = [
   ["feed", "Feed"],
@@ -66,8 +67,12 @@ async function initUsers() {
     select.innerHTML = ids.map((id) => `<option${id === currentUser() ? " selected" : ""}>${esc(id)}</option>`).join("");
   } catch (err) {
     status.classList.add("down");
-    status.querySelector("span").textContent = "API unreachable";
-    select.innerHTML = `<option>${esc(currentUser() || "—")}</option>`;
+    status.querySelector("span").textContent = "API unreachable · test data";
+    // Feed, Quests, Leaders and Profile fall back to the test users of mock.js (game.js), so offer them here.
+    const ids = Object.keys(PEOPLE);
+    if (!currentUser()) setCurrentUser(ids[0]);
+    if (!ids.includes(currentUser())) ids.unshift(currentUser());
+    select.innerHTML = ids.map((id) => `<option${id === currentUser() ? " selected" : ""}>${esc(id)}</option>`).join("");
   }
   select.addEventListener("change", () => {
     setCurrentUser(select.value);

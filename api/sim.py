@@ -161,7 +161,7 @@ def outing(
             seen_and_picked += is_seen
             when = min(seconds, s + rng.randint(1, 4))
             note = f"{clock(when)}  grabber picks {'a ' + name if is_seen else 'something'}: {picked} picks, {km(when)}"
-            timeline.append((event("pick", when, grabber, confidence=round(rng.uniform(0.8, 0.99), 2)), note))
+            timeline.append((event("pick", when, grabber), note))
         s += rng.randint(25, 70) if role == "plogger" else rng.randint(40, 110)
 
     end = event("session.end", seconds, phone, session_id=session_id)

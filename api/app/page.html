@@ -60,7 +60,6 @@
 
   function details(e) {
     switch (e.type) {
-      case "pick": return `confidence ${pct(e.confidence)}`;
       case "sighting": return `${e.litter_type} at ${e.lat}, ${e.lon} · confidence ${pct(e.confidence)}`;
       case "track.points": return `${e.points.length} points · session ${short(e.session_id)}`;
       case "session.start":

@@ -69,7 +69,7 @@ def test_live_outing(client):
         "role": "plogger",
         "device_ids": ["grabber-1"],
     }
-    pick = {"event_id": str(uuid.uuid4()), "type": "pick", "device_id": "grabber-1", "t": now, "confidence": 0.9}
+    pick = {"event_id": str(uuid.uuid4()), "type": "pick", "device_id": "grabber-1", "t": now}
     client.post("/api/events", json={"events": [start, pick]})
     outing = client.get("/api/outings/live").json()
     assert (outing["live"], outing["ended_at"], outing["stats"]["picks"]) == (True, None, 1)

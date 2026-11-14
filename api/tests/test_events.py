@@ -26,7 +26,6 @@ def pick(**overrides) -> dict:
         "type": "pick",
         "device_id": "grabber-1",
         "t": int(time.time() * 1000),
-        "confidence": 0.9,
     } | overrides
 
 
@@ -59,11 +58,11 @@ def test_resent_event_is_accepted_once_stored(client):
 
 
 def test_bad_event_is_rejected_alone(client):
-    good, bad = pick(), pick(confidence=1.5)
+    good, bad = pick(), pick(device_id="")
     res = client.post("/api/events", json={"events": [good, bad, {"event_id": "x", "type": "nope"}, 7]}).json()
     assert res["accepted"] == [good["event_id"]]
     assert [r["event_id"] for r in res["rejected"]] == [bad["event_id"], "x", None]
-    assert "confidence" in res["rejected"][0]["error"]
+    assert "device_id" in res["rejected"][0]["error"]
     assert "unknown type 'nope'" in res["rejected"][1]["error"]
 
 
@@ -78,9 +77,10 @@ def test_missing_or_wrong_t_becomes_arrival_time(client):
 
 
 def test_fields_outside_the_contract_are_dropped(client):
-    e = pick(secret="x")
+    e = pick(secret="x", confidence=0.9)  # confidence was in the contract for picks until 14.11
     client.post("/api/events", json={"events": [e]})
-    assert "secret" not in client.get("/api/events").json()["events"][0]
+    stored = client.get("/api/events").json()["events"][0]
+    assert "secret" not in stored and "confidence" not in stored
 
 
 def test_more_than_100_events_is_refused(client):

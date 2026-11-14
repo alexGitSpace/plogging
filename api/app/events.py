@@ -61,8 +61,7 @@ class TrackPoints(_Event):
 
 
 class Pick(_Event):
-    type: Literal["pick"]
-    confidence: Confidence
+    type: Literal["pick"]  # The grabber only reports that it picked something
 
 
 class Sighting(_Event):

@@ -19,7 +19,7 @@ def event(type_: str, t: int, device_id: str = "phone-1", **fields) -> dict:
 
 
 def pick(t: int, device_id: str = "grabber-1") -> dict:
-    return event("pick", t, device_id, confidence=0.9)
+    return event("pick", t, device_id)
 
 
 def start(session_id: str, t: int = T0, devices: tuple = ("grabber-1",), user_id: str = "user-1") -> dict:

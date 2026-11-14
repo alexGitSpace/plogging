@@ -28,7 +28,7 @@ Every event has:
 |---|---|---|
 | `session.start` | phone | `session_id` (a UUID for this outing), `user_id`, `role` (`plogger` or `scout`), `device_ids` (the other devices on this outing, such as `["grabber-1"]`) |
 | `track.points` | phone | `session_id`, `points`: a list of `{"t", "lat", "lon", "accuracy"}`, accuracy in metres |
-| `pick` | grabber | `confidence` (0 to 1) |
+| `pick` | grabber | None: the grabber only reports that it picked something |
 | `sighting` | glasses app | `lat`, `lon`, `litter_type`, `confidence` |
 | `session.end` | phone | `session_id` |
 

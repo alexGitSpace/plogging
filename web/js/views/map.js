@@ -49,29 +49,37 @@ export default async function render(el) {
     meDot.setLatLng([lat, lon]).addTo(map);
   }
 
-  // While recording the map follows you, until you drag it; "Find me" brings that back.
+  // While recording, or after "Find me", the map follows you until you drag it; "Find me" brings that back.
   let follow = true;
   map.on("dragstart", () => (follow = false));
 
   const locateBtn = $("#locate");
+  let watchId = null; // Our own position watch, started by "Find me" when not recording
+  let lastFix = null;
   locateBtn.onclick = () => {
     follow = true;
     const fix = recorder.current()?.fix;
     if (fix) return map.flyTo([fix.lat, fix.lon], Math.max(map.getZoom(), 17));
-    // Needs HTTPS or localhost.
+    // Needs HTTPS or localhost. Not recording: watch the position ourselves, so the dot moves as you walk.
     if (!navigator.geolocation) return (locateBtn.title = "Location is not available in this browser");
+    if (lastFix) map.flyTo([lastFix.lat, lastFix.lon], Math.max(map.getZoom(), 16));
+    if (watchId !== null) return;
     locateBtn.classList.add("busy");
-    navigator.geolocation.getCurrentPosition(
+    watchId = navigator.geolocation.watchPosition(
       ({ coords }) => {
         locateBtn.classList.remove("busy");
+        const first = !lastFix;
+        lastFix = { lat: coords.latitude, lon: coords.longitude };
+        if (recorder.current()) return; // While recording, update() shows the recorder's fix
         showMe(coords.latitude, coords.longitude, coords.accuracy);
-        map.flyTo([coords.latitude, coords.longitude], Math.max(map.getZoom(), 16));
+        if (first) map.flyTo([lastFix.lat, lastFix.lon], Math.max(map.getZoom(), 16));
+        else if (follow) map.panTo([lastFix.lat, lastFix.lon], { animate: true });
       },
       (err) => {
         locateBtn.classList.remove("busy");
         locateBtn.title = `Could not get your location: ${err.message}`;
       },
-      { enableHighAccuracy: true, timeout: 10000 },
+      { enableHighAccuracy: true, maximumAge: 0, timeout: 30000 },
     );
   };
 
@@ -221,6 +229,7 @@ export default async function render(el) {
     clearInterval(ticker);
     clearTimeout(finishArmed);
     stopPicks();
+    if (watchId !== null) navigator.geolocation.clearWatch(watchId);
     map.remove();
   };
 }

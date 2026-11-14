@@ -4,6 +4,7 @@
 import { api, API_URL, currentUser, setCurrentUser } from "./api.js";
 import { esc, icon } from "./ui.js";
 import { PEOPLE } from "./mock.js";
+import * as recorder from "./recorder.js"; // Loaded here so an outing keeps recording on every screen
 
 const TABS = [
   ["feed", "Feed"],
@@ -29,6 +30,8 @@ let cleanup = null;
 let routeId = 0;
 
 navEl.innerHTML = TABS.map(([id, label]) => `<a href="#/${id}" data-tab="${id}">${icon(id)}<span>${label}</span></a>`).join("");
+// A red dot on Map while an outing is being recorded in this browser.
+recorder.subscribe(() => navEl.querySelector('[data-tab="map"]').classList.toggle("recording", !!recorder.current()));
 
 async function route() {
   const [name, param] = location.hash.replace(/^#\/?/, "").split("/");

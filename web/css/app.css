@@ -85,14 +85,14 @@ h1, h2, h3, p { margin: 0; }
 /* Pick celebration on the map (views/map.js, vanish) */
 .pick-fx { position: relative; pointer-events: none; }
 .pick-fx > * { position: absolute; left: 0; top: 0; }
-.pick-fx .check { display: grid; place-items: center; width: 48px; height: 48px; margin: -24px 0 0 -24px; border-radius: 50%; background: var(--green); color: #fff; box-shadow: 0 6px 18px rgba(22, 179, 100, 0.5); animation: fx-pop 1.6s cubic-bezier(.2, 1.6, .4, 1) forwards; }
+.pick-fx .check { display: grid; place-items: center; width: 48px; height: 48px; margin: -24px 0 0 -24px; border-radius: 50%; background: #ff7a1a; color: #fff; box-shadow: 0 6px 18px rgba(255, 122, 26, 0.5); animation: fx-pop 1.6s cubic-bezier(.2, 1.6, .4, 1) forwards; }
 .pick-fx .wave { width: 160px; height: 160px; margin: -80px 0 0 -80px; border-radius: 50%; border: 5px solid var(--green); animation: fx-wave 1s ease-out forwards; }
 .pick-fx .wave.w2 { animation-delay: 0.22s; opacity: 0; }
 .pick-fx .leaf { width: 12px; height: 7px; margin: -3px 0 0 -6px; border-radius: 7px 0; background: #3ddc84; animation: fx-leaf 1.1s var(--d) ease-out forwards; opacity: 0; }
 .pick-fx .leaf:nth-child(3n) { background: var(--green); }
 .pick-fx .leaf:nth-child(4n) { background: #fdb022; }
 .pick-fx .plus { margin: -18px 0 0 -40px; width: 80px; text-align: center; font-weight: 800; font-size: 28px; color: var(--green-dark); text-shadow: 0 2px 0 #fff, 0 0 8px #fff; animation: fx-plus 1.6s 0.15s ease-out forwards; opacity: 0; }
-@keyframes fx-pop { 0% { transform: scale(0.2); } 18% { transform: scale(1.35); } 30% { transform: scale(1); } 75% { transform: scale(1); opacity: 1; } 100% { transform: scale(0.4); opacity: 0; } }
+@keyframes fx-pop { 0% { transform: scale(0.2); background: var(--green); } 18% { transform: scale(1.35); background: #ff7a1a; } 30% { transform: scale(1); } 75% { transform: scale(1); opacity: 1; } 100% { transform: scale(0.4); opacity: 0; } }
 @keyframes fx-wave { 0% { transform: scale(0.1); opacity: 0.9; } 100% { transform: scale(1); opacity: 0; } }
 @keyframes fx-leaf { 0% { transform: translate(0, 0) rotate(0); opacity: 1; } 100% { transform: translate(var(--x), calc(var(--y) + 24px)) rotate(var(--r)); opacity: 0; } }
 @keyframes fx-plus { 0% { transform: translateY(0) scale(0.6); opacity: 0; } 20% { transform: translateY(-34px) scale(1.15); opacity: 1; } 70% { transform: translateY(-52px) scale(1); opacity: 1; } 100% { transform: translateY(-70px); opacity: 0; } }

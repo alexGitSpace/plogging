@@ -1,0 +1,43 @@
+# XcodeGen spec for PloggingGlasses.xcodeproj.
+# After adding or removing files, regenerate the project: `xcodegen` in this folder.
+name: PloggingGlasses
+
+options:
+  deploymentTarget:
+    iOS: "17.2"
+  createIntermediateGroups: true
+
+packages:
+  MetaWearablesDAT:
+    url: https://github.com/facebook/meta-wearables-dat-ios
+    exactVersion: 1.0.1
+  PloggingDetection:
+    path: Detection
+
+targets:
+  PloggingGlasses:
+    type: application
+    platform: iOS
+    sources:
+      - path: App
+    dependencies:
+      - package: MetaWearablesDAT
+        product: MWDATCore
+      - package: MetaWearablesDAT
+        product: MWDATCamera
+      - package: MetaWearablesDAT
+        product: MWDATMockDevice
+      - package: PloggingDetection
+        product: PloggingDetection
+    settings:
+      base:
+        INFOPLIST_FILE: App/Info.plist
+        GENERATE_INFOPLIST_FILE: NO
+        # Change this to your own identifier before running on a phone.
+        PRODUCT_BUNDLE_IDENTIFIER: dev.plogging.glasses
+        PRODUCT_NAME: PloggingGlasses
+        MARKETING_VERSION: "0.1"
+        CURRENT_PROJECT_VERSION: "1"
+        SWIFT_VERSION: "5.0"
+        TARGETED_DEVICE_FAMILY: "1"
+        CODE_SIGN_STYLE: Automatic

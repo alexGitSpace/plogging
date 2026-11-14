@@ -1,0 +1,413 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		04C14E44E4D4903ED6474634 /* PloggingGlassesApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C8CADEF696D9CB710C804C7 /* PloggingGlassesApp.swift */; };
+		24F8A11E0D98BC02AC920C47 /* PloggingDetection in Frameworks */ = {isa = PBXBuildFile; productRef = E7E943420677D4DDDA7213DA /* PloggingDetection */; };
+		391CB1BB759E377732F0ACF4 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C026D82E933FBFE76C73BBA /* ContentView.swift */; };
+		43623301405F9F2C1F3D20D2 /* GlassesSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62BDE575126EA863347EDFB6 /* GlassesSource.swift */; };
+		87755930A0E0790AB42992CD /* Detector.mlpackage in Sources */ = {isa = PBXBuildFile; fileRef = 92041AA77AECC6BEC6BB5F7F /* Detector.mlpackage */; };
+		A25BF0CFD5E300246007C948 /* MWDATCamera in Frameworks */ = {isa = PBXBuildFile; productRef = 6A8FD75B3C05339EBB94EF0A /* MWDATCamera */; };
+		AAF88FA6471C9AF2441BFEEC /* MWDATMockDevice in Frameworks */ = {isa = PBXBuildFile; productRef = 15C9C0AC70A444B849EF1C9C /* MWDATMockDevice */; };
+		D4BCBFE0540CD7B54D017701 /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C383D005A24D242B5477EDCE /* AppModel.swift */; };
+		E1F825D710A5B66BFE631DA5 /* demo.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = F8F3C55720A4CD3FA364CD92 /* demo.mp4 */; };
+		FF360036969AF2EBB6AC8C78 /* MWDATCore in Frameworks */ = {isa = PBXBuildFile; productRef = 72425B91444E4053282A2674 /* MWDATCore */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		0F86F9ADECD7C17A10B2DF37 /* PloggingGlasses.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = PloggingGlasses.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		2C026D82E933FBFE76C73BBA /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		62BDE575126EA863347EDFB6 /* GlassesSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlassesSource.swift; sourceTree = "<group>"; };
+		7C8CADEF696D9CB710C804C7 /* PloggingGlassesApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PloggingGlassesApp.swift; sourceTree = "<group>"; };
+		92041AA77AECC6BEC6BB5F7F /* Detector.mlpackage */ = {isa = PBXFileReference; path = Detector.mlpackage; sourceTree = "<group>"; };
+		AD9C0F7A7348473C910A2113 /* Detection */ = {isa = PBXFileReference; lastKnownFileType = folder; name = Detection; path = Detection; sourceTree = SOURCE_ROOT; };
+		C383D005A24D242B5477EDCE /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
+		D4F68DFBB6D7E214E2EF2C25 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		F8F3C55720A4CD3FA364CD92 /* demo.mp4 */ = {isa = PBXFileReference; path = demo.mp4; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		575F0C87D6C8822B818EEB0B /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				FF360036969AF2EBB6AC8C78 /* MWDATCore in Frameworks */,
+				A25BF0CFD5E300246007C948 /* MWDATCamera in Frameworks */,
+				AAF88FA6471C9AF2441BFEEC /* MWDATMockDevice in Frameworks */,
+				24F8A11E0D98BC02AC920C47 /* PloggingDetection in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		0481C06EC707D3CA2F5BE209 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				C383D005A24D242B5477EDCE /* AppModel.swift */,
+				2C026D82E933FBFE76C73BBA /* ContentView.swift */,
+				62BDE575126EA863347EDFB6 /* GlassesSource.swift */,
+				D4F68DFBB6D7E214E2EF2C25 /* Info.plist */,
+				7C8CADEF696D9CB710C804C7 /* PloggingGlassesApp.swift */,
+				5E036BEE89A6A18A0A11F87E /* Resources */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		5E036BEE89A6A18A0A11F87E /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				F8F3C55720A4CD3FA364CD92 /* demo.mp4 */,
+				92041AA77AECC6BEC6BB5F7F /* Detector.mlpackage */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		B7E256FD1DBCF50415BEC702 /* Packages */ = {
+			isa = PBXGroup;
+			children = (
+				AD9C0F7A7348473C910A2113 /* Detection */,
+			);
+			name = Packages;
+			sourceTree = "<group>";
+		};
+		EF345D9B848A0BE1A2AE6AF0 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				0F86F9ADECD7C17A10B2DF37 /* PloggingGlasses.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		F5B41EE9D90C644D43ADF03D = {
+			isa = PBXGroup;
+			children = (
+				0481C06EC707D3CA2F5BE209 /* App */,
+				B7E256FD1DBCF50415BEC702 /* Packages */,
+				EF345D9B848A0BE1A2AE6AF0 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		8284C44FF077FE6703F0C961 /* PloggingGlasses */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 359D03110ACA08B49C3BE10C /* Build configuration list for PBXNativeTarget "PloggingGlasses" */;
+			buildPhases = (
+				E7C099E22BCDC9D01796C5A1 /* Sources */,
+				2CC85766A5988AACF2E60B69 /* Resources */,
+				575F0C87D6C8822B818EEB0B /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = PloggingGlasses;
+			packageProductDependencies = (
+				72425B91444E4053282A2674 /* MWDATCore */,
+				6A8FD75B3C05339EBB94EF0A /* MWDATCamera */,
+				15C9C0AC70A444B849EF1C9C /* MWDATMockDevice */,
+				E7E943420677D4DDDA7213DA /* PloggingDetection */,
+			);
+			productName = PloggingGlasses;
+			productReference = 0F86F9ADECD7C17A10B2DF37 /* PloggingGlasses.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		7871C079F082DAA22D3AC18B /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					8284C44FF077FE6703F0C961 = {
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = 87DDC46118F1DDF52315EA11 /* Build configuration list for PBXProject "PloggingGlasses" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = F5B41EE9D90C644D43ADF03D;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				5EBFDDDFBFD2785E3DB730B1 /* XCRemoteSwiftPackageReference "meta-wearables-dat-ios" */,
+				D6C5A942FFD75969C8A8624E /* XCLocalSwiftPackageReference "Detection" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = EF345D9B848A0BE1A2AE6AF0 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				8284C44FF077FE6703F0C961 /* PloggingGlasses */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		2CC85766A5988AACF2E60B69 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E1F825D710A5B66BFE631DA5 /* demo.mp4 in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		E7C099E22BCDC9D01796C5A1 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D4BCBFE0540CD7B54D017701 /* AppModel.swift in Sources */,
+				391CB1BB759E377732F0ACF4 /* ContentView.swift in Sources */,
+				87755930A0E0790AB42992CD /* Detector.mlpackage in Sources */,
+				43623301405F9F2C1F3D20D2 /* GlassesSource.swift in Sources */,
+				04C14E44E4D4903ED6474634 /* PloggingGlassesApp.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		020869C432645A76B305A574 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.2;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		4083D77465510802DD1BC008 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = App/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.1;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.plogging.glasses;
+				PRODUCT_NAME = PloggingGlasses;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		BD7F465CCE448D88838E73BD /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.2;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		F5FB418DE351BA5FA0B2B671 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = App/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.1;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.plogging.glasses;
+				PRODUCT_NAME = PloggingGlasses;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		359D03110ACA08B49C3BE10C /* Build configuration list for PBXNativeTarget "PloggingGlasses" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4083D77465510802DD1BC008 /* Debug */,
+				F5FB418DE351BA5FA0B2B671 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		87DDC46118F1DDF52315EA11 /* Build configuration list for PBXProject "PloggingGlasses" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				020869C432645A76B305A574 /* Debug */,
+				BD7F465CCE448D88838E73BD /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		D6C5A942FFD75969C8A8624E /* XCLocalSwiftPackageReference "Detection" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Detection;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		5EBFDDDFBFD2785E3DB730B1 /* XCRemoteSwiftPackageReference "meta-wearables-dat-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/facebook/meta-wearables-dat-ios";
+			requirement = {
+				kind = exactVersion;
+				version = 1.0.1;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		15C9C0AC70A444B849EF1C9C /* MWDATMockDevice */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 5EBFDDDFBFD2785E3DB730B1 /* XCRemoteSwiftPackageReference "meta-wearables-dat-ios" */;
+			productName = MWDATMockDevice;
+		};
+		6A8FD75B3C05339EBB94EF0A /* MWDATCamera */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 5EBFDDDFBFD2785E3DB730B1 /* XCRemoteSwiftPackageReference "meta-wearables-dat-ios" */;
+			productName = MWDATCamera;
+		};
+		72425B91444E4053282A2674 /* MWDATCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 5EBFDDDFBFD2785E3DB730B1 /* XCRemoteSwiftPackageReference "meta-wearables-dat-ios" */;
+			productName = MWDATCore;
+		};
+		E7E943420677D4DDDA7213DA /* PloggingDetection */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = PloggingDetection;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 7871C079F082DAA22D3AC18B /* Project object */;
+}

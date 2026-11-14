@@ -80,6 +80,13 @@ def test_newer_outing_takes_the_grabber():
     assert (newer.picks[0]["lat"], newer.picks[0]["lon"]) == (None, None)  # no track yet
 
 
+def test_next_outing_does_not_take_the_last_picks_of_the_one_before():
+    end = event("session.end", T0 + 600_000, session_id="s1")
+    second = start("s2", t=T0 + 620_000)  # started 20 s after the first one ended
+    (first,) = [o for o in build_sorted([start("s1"), end, second, pick(T0 + 590_000)]).outings if o.session_id == "s1"]
+    assert [p["t"] for p in first.picks] == [T0 + 590_000]
+
+
 def test_forgotten_outing_does_not_collect_bench_picks():
     log = build_sorted(
         [start("s1"), track("s1", (T0, 60.18, 24.83)), pick(T0 + 20 * 60_000), pick(T0 + IDLE_END_MS + 2 * 60_000)]

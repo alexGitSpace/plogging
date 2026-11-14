@@ -37,9 +37,9 @@ class Outing:
         """Without session.end the outing is over IDLE_END_MS after its last track point."""
         return (self.route[-1]["t"] if self.route else self.started_at) + IDLE_END_MS
 
-    def was_on(self, t: int) -> bool:
+    def was_on(self, t: int, grace_ms: int = 0) -> bool:
         end = self.ended_at if self.ended_at is not None else self.open_until
-        return self.started_at - GRACE_MS <= t <= end + GRACE_MS
+        return self.started_at - grace_ms <= t <= end + grace_ms
 
 
 @dataclass
@@ -159,9 +159,14 @@ def _distance(route: list[dict]) -> float:
 
 
 def _owner(outings, e: dict) -> Outing | None:
-    """The outing that lists the device of the event and was on at that time; if two were, the later one."""
-    on = [o for o in outings if e["device_id"] in o.device_ids and o.was_on(e["t"])]
-    return max(on, key=lambda o: o.started_at) if on else None
+    """The outing that lists the device of the event and was on at that time; if two were, the later one.
+    The minute of grace for device clocks counts only when no outing was on: otherwise an outing started
+    right after another would take the last picks of the one before."""
+    listed = [o for o in outings if e["device_id"] in o.device_ids]
+    for grace_ms in (0, GRACE_MS):
+        if on := [o for o in listed if o.was_on(e["t"], grace_ms)]:
+            return max(on, key=lambda o: o.started_at)
+    return None
 
 
 def _spots(timeline: list[tuple]) -> list[dict]:

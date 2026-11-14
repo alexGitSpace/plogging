@@ -1,8 +1,8 @@
 /* Colours and shapes from the Figma mockup ("Sport style (EN)"). */
 :root {
-  --green: #1db35b;
-  --green-dark: #149a4b;
-  --green-soft: #e7f6ec;
+  --green: #16b364;
+  --green-dark: #0e7c45;
+  --green-soft: #eafbf1;
   --ink: #141414;
   --muted: #8a9096;
   --line: #eceeed;
@@ -18,7 +18,7 @@
 * { box-sizing: border-box; }
 html, body { height: 100%; margin: 0; }
 body {
-  font-family: Inter, system-ui, -apple-system, sans-serif;
+  font-family: Montserrat, system-ui, -apple-system, sans-serif;
   color: var(--ink);
   background: var(--bg);
   -webkit-font-smoothing: antialiased;

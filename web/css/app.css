@@ -88,15 +88,21 @@ h1, h2, h3, p { margin: 0; }
 .map { position: absolute; inset: 0; background: #eef0ec; }
 .map-overlay { position: absolute; z-index: 500; }
 .leaflet-container { font-family: inherit; }
+.locate-btn { top: 24px; right: 24px; display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; background: var(--card); color: var(--ink); box-shadow: var(--shadow); }
+.locate-btn:hover { color: var(--green); }
+.locate-btn.busy { color: var(--green); animation: pulse 1s infinite; }
+@keyframes pulse { 50% { opacity: 0.4; } }
 .tiles-light { filter: grayscale(0.75) brightness(1.06) contrast(0.92); }
 
 @media (max-width: 760px) {
   :root { --sidebar: 0px; }
-  .sidebar { inset: auto 0 0 0; width: auto; height: 64px; flex-direction: row; padding: 8px; border-right: 0; border-top: 1px solid var(--line); }
+  /* env(safe-area-inset-*) keeps the bar above the iPhone home indicator (needs viewport-fit=cover in index.html) */
+  .sidebar { inset: auto 0 0 0; width: auto; height: calc(64px + env(safe-area-inset-bottom)); flex-direction: row; padding: 8px 8px calc(8px + env(safe-area-inset-bottom)); border-right: 0; border-top: 1px solid var(--line); }
   .brand, .sidebar-foot { display: none; }
   .nav { flex-direction: row; flex: 1; justify-content: space-around; }
   .nav a { flex-direction: column; gap: 2px; font-size: 11px; padding: 4px 8px; }
-  .view { padding: 20px 16px 88px; }
-  .view-map, .view-outing { height: calc(100vh - 64px); padding: 0; }
+  .view { padding: calc(20px + env(safe-area-inset-top)) 16px calc(88px + env(safe-area-inset-bottom)); }
+  .locate-btn { top: calc(16px + env(safe-area-inset-top)); right: 16px; }
+  .view-map, .view-outing { height: calc(100dvh - 64px - env(safe-area-inset-bottom)); padding: 0; }
   .grid-2, .grid-3 { grid-template-columns: 1fr; }
 }

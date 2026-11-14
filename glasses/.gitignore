@@ -1,0 +1,8 @@
+# Made by scripts/setup.sh: the model and the demo video are not kept in git
+App/Resources/*.mlpackage
+App/Resources/*.mp4
+*.pt
+
+# Swift Package Manager
+.swiftpm/
+Package.resolved

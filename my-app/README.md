@@ -4,8 +4,9 @@ Hold the button for more than 1 second and the on-board RGB LED 3 blinks
 green twice (200 ms on / 200 ms off). It fires once per press: release the
 button before the next long press. On each long press the sketch
 (`sketch/sketch.ino`) also notifies the Linux side (`python/main.py`), which
-takes a photo with the USB camera, classifies it on the board, then makes a
-web request to `https://httpbin.org/get`, and prints both outcomes.
+takes a photo with the USB camera, classifies it on the board and, when the
+most confident label reaches 30 %, sends a `pick` event to the API
+([contract](../contract/README.md)). It prints both outcomes.
 
 The blink does not depend on Linux: it comes at once, even offline or
 without a camera. Only the log tells what the request and the photo gave.
@@ -95,6 +96,19 @@ curl -I https://httpbin.org/get   # first line should end in 200
 Wrong password or network? `sudo nmcli connection delete "MY_SSID"` and
 connect again.
 
+## Setting the API URL
+
+The API URL is in the team chat, not in the repository. Store it once on
+the board, outside the app folder, which every deploy replaces:
+
+```sh
+ssh arduino@<board-ip> "echo 'API_URL=https://<the-api-host>' > /home/arduino/my-app.env"
+```
+
+`deploy.sh` copies that file into the app folder as `.env` on every deploy,
+and the app reads it at start-up. Without it the app still classifies and
+logs, but sends no pick.
+
 ## Connecting the camera
 
 The UNO Q has a single USB-C port, so a USB webcam goes through a USB-C hub
@@ -137,15 +151,23 @@ time (the same clock as in the photo names):
 
 ```
 2026-11-14 15:30:12 long press 1: camera sees -> water bottle 71 %, carton 12 %, pop bottle 9 % (0.9 s) [photos/20261114-153012-press1.jpg]
-2026-11-14 15:30:13 long press 1: GET https://httpbin.org/get -> OK, HTTP 200 (0.5 s)
-2026-11-14 15:31:40 long press 2: camera sees -> nothing above 5 % (0.9 s) [photos/20261114-153140-press2.jpg]
-2026-11-14 15:31:44 long press 2: GET https://httpbin.org/get -> FAILED, no answer before the deadline (4.1 s)
-2026-11-14 15:31:46 long press 3: DROPPED, waited more than 5 s for the previous one
+2026-11-14 15:30:13 long press 1: pick of water bottle -> OK, accepted (0.5 s)
+2026-11-14 15:31:40 long press 2: camera sees -> carton 12 %, pop bottle 9 % (0.9 s) [photos/20261114-153140-press2.jpg]
+2026-11-14 15:31:40 long press 2: no pick sent, nothing above 30 %
+2026-11-14 15:32:05 long press 3: camera sees -> pop bottle 64 % (0.9 s) [photos/20261114-153205-press3.jpg]
+2026-11-14 15:32:09 long press 3: pick of pop bottle -> FAILED, no answer before the deadline (4.1 s)
+2026-11-14 15:32:11 long press 4: DROPPED, waited more than 5 s for the previous one
 ```
 
-A long press gets 5 s from the moment it reaches Linux. The web request is
+A long press gets 5 s from the moment it reaches Linux. The request is
 cut off when they run out, and a press that waited the whole 5 s behind an
 earlier one is dropped without a photo or a request.
+
+A pick is sent only when the most confident label reaches 30 %
+(`_PICK_CONFIDENCE` in `python/main.py`). The event is the contract's
+`pick`: its `t` is the moment the press reached Linux, and it carries no
+label, as the contract has no field for one. A pick that fails is not
+resent.
 
 The camera line lists the model's three most confident labels. `nothing
 above 5 %` means it recognised nothing; `FAILED` means the camera gave no
@@ -165,6 +187,6 @@ Copy them before the next deploy: `deploy.sh` replaces the whole app folder
 on the board, photos included. Nothing else deletes them, so clear the
 folder yourself after a long session.
 
-On the GET line, `OK` means the server answered with a 2xx status. `FAILED`
-shows the reason (no Wi-Fi, DNS, the 5 s running out, or an HTTP error
-status). The counter starts again at 1 whenever the sketch restarts.
+On the pick line, `OK, accepted` means the API stored the event,
+`REJECTED` shows the API's reason, and `FAILED` shows why there was no
+answer (no Wi-Fi, DNS, the 5 s running out, or an HTTP error status). The counter starts again at 1 whenever the sketch restarts.

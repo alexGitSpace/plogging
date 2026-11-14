@@ -1,5 +1,5 @@
 // Long-press demo: holding the button on D2 for 1 s blinks LED 3 green twice
-// and tells the Linux side, which makes a web request (see ../python/main.py).
+// and tells the Linux side, which sends a pick event (see ../python/main.py).
 // Wiring is described in ../README.md.
 
 #include <Arduino_RouterBridge.h>

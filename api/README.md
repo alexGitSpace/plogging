@@ -48,5 +48,7 @@ How the stub reads the contract:
 - A resent `event_id` is accepted again but stored once.
 - A `t` that is missing, before 2026 or more than a day ahead (for example seconds instead of milliseconds) becomes the arrival time.
 - Fields outside the contract are dropped.
+- `device_id`, `session_id`, `user_id` and each of `device_ids` must be 1 to 100 characters, and `device_ids` can list up to 10 devices. An event that breaks this goes to `rejected`.
 - A request that is not `{"events": [...]}` with up to 100 items gets `422` and stores nothing.
+- A request body over 1 MB gets `413` and stores nothing. An hour of track at one point per second takes about 250 kB.
 - No authentication yet: anyone who knows the URL can post events.

@@ -88,6 +88,37 @@ def test_more_than_100_events_is_refused(client):
     assert res.status_code == 422
 
 
+def test_body_over_1_mb_is_refused(client):
+    body = json.dumps({"events": [pick(padding="x" * 1_000_000)]}).encode()
+    headers = {"content-type": "application/json"}
+    assert client.post("/api/events", content=body, headers=headers).status_code == 413
+    # Sent in chunks, without Content-Length: the API counts the bytes as they arrive.
+    assert client.post("/api/events", content=iter([body]), headers=headers).status_code == 413
+    assert client.get("/api/events").json()["events"] == []
+
+
+def test_hour_of_track_fits_one_request(client):
+    start = 1794654000000
+    points = [{"t": start + i * 1000, "lat": 60.1841, "lon": 24.8301, "accuracy": 4.7} for i in range(3600)]
+    track = {**example("outing.json")["events"][2], "points": points}
+    res = client.post("/api/events", json={"events": [track]})
+    assert res.status_code == 200
+    assert res.json()["accepted"] == [track["event_id"]]
+
+
+def test_ids_over_100_characters_are_rejected(client):
+    start = example("outing.json")["events"][0]
+    res = client.post(
+        "/api/events",
+        json={"events": [pick(device_id="x" * 101), start | {"user_id": "x" * 101}, start | {"device_ids": [""]}]},
+    ).json()
+    assert [r["error"] for r in res["rejected"]] == [
+        "device_id: String should have at most 100 characters",
+        "user_id: String should have at most 100 characters",
+        "device_ids.0: String should have at least 1 character",
+    ]
+
+
 def test_page(client):
     res = client.get("/")
     assert res.status_code == 200

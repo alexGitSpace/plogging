@@ -9,11 +9,15 @@ from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, ValidationError,
 # A `t` outside this window is "clearly wrong" (contract, section Time): the API uses the arrival time instead.
 EARLIEST_T = 1767225600000  # 2026-01-01T00:00:00Z
 MAX_FUTURE_MS = 24 * 60 * 60 * 1000
+MAX_ID_LENGTH = 100
+MAX_DEVICES = 10
 
 LitterType = Literal["bottle", "can", "cigarette_butt", "wrapper", "paper", "other"]
 Confidence = Annotated[float, Field(ge=0, le=1)]
 Lat = Annotated[float, Field(ge=-90, le=90)]
 Lon = Annotated[float, Field(ge=-180, le=180)]
+# Ids are short labels such as `grabber-1` or UUIDs. The cap keeps junk out of the database and the leaderboard.
+Id = Annotated[str, Field(min_length=1, max_length=MAX_ID_LENGTH)]
 
 
 class _Event(BaseModel):
@@ -21,7 +25,7 @@ class _Event(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
     event_id: str
-    device_id: Annotated[str, Field(min_length=1)]
+    device_id: Id
     t: int | None = None
 
     @field_validator("event_id")
@@ -35,10 +39,10 @@ class _Event(BaseModel):
 
 class SessionStart(_Event):
     type: Literal["session.start"]
-    session_id: str
-    user_id: str
+    session_id: Id
+    user_id: Id
     role: Literal["plogger", "scout"]
-    device_ids: list[str]
+    device_ids: Annotated[list[Id], Field(max_length=MAX_DEVICES)]
 
 
 class TrackPoint(BaseModel):
@@ -52,7 +56,7 @@ class TrackPoint(BaseModel):
 
 class TrackPoints(_Event):
     type: Literal["track.points"]
-    session_id: str
+    session_id: Id
     points: list[TrackPoint]
 
 
@@ -71,7 +75,7 @@ class Sighting(_Event):
 
 class SessionEnd(_Event):
     type: Literal["session.end"]
-    session_id: str
+    session_id: Id
 
 
 Event = Annotated[SessionStart | TrackPoints | Pick | Sighting | SessionEnd, Field(discriminator="type")]

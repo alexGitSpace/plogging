@@ -5,16 +5,49 @@ import time
 from pathlib import Path
 from typing import Annotated, Any
 
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel, Field
+from starlette.datastructures import Headers
+from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from app.events import parse_event
 from app.store import Store
 
 MAX_BATCH = 100
+MAX_BODY_BYTES = 1_000_000  # An hour of track at one point per second takes about a quarter of it
 PAGE = Path(__file__).with_name("page.html")
+
+
+class BodySizeLimit:
+    """Answer 413 to a request body over max_bytes, whether or not the client sends Content-Length."""
+
+    def __init__(self, app: ASGIApp, max_bytes: int) -> None:
+        self.app = app
+        self.max_bytes = max_bytes
+        self.detail = f"The request body is over {max_bytes} bytes: send fewer events per request"
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+        length = Headers(scope=scope).get("content-length", "")
+        if length.isdigit() and int(length) > self.max_bytes:
+            await JSONResponse({"detail": self.detail}, status_code=413)(scope, receive, send)
+            return
+        received = 0
+
+        async def limited_receive() -> Message:
+            nonlocal received
+            message = await receive()
+            received += len(message.get("body", b""))
+            if received > self.max_bytes:
+                # FastAPI passes an HTTPException raised while it reads the body on to its handler.
+                raise HTTPException(413, self.detail)
+            return message
+
+        await self.app(scope, limited_receive, send)
 
 
 class EventBatch(BaseModel):
@@ -39,6 +72,8 @@ class EventList(BaseModel):
 def create_app(db_path: str) -> FastAPI:
     store = Store(db_path)
     app = FastAPI(title="plogging API", summary="Events format: contract/README.md in the repository")
+    # Added before CORS so that CORS wraps it and browsers can read the 413.
+    app.add_middleware(BodySizeLimit, max_bytes=MAX_BODY_BYTES)
     # Devices, the web app and the glasses web app may live on other origins. Nothing here needs cookies.
     app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["GET", "POST"], allow_headers=["*"])
 

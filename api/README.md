@@ -47,7 +47,7 @@ Every deploy stops the API for a few seconds: Railway never runs two copies of a
 | `GET /` | A page with the latest 50 events, refreshed every 2 seconds |
 | `GET /docs` | OpenAPI docs |
 
-How the stub reads the contract:
+How the API reads the contract:
 
 - A resent `event_id` is accepted again but stored once.
 - A `t` that is missing, before 2026 or more than a day ahead (for example seconds instead of milliseconds) becomes the arrival time.
@@ -56,3 +56,21 @@ How the stub reads the contract:
 - A request that is not `{"events": [...]}` with up to 100 items gets `422` and stores nothing.
 - A request body over 1 MB gets `413` and stores nothing. An hour of track at one point per second takes about 250 kB.
 - No authentication yet: anyone who knows the URL can post events.
+
+## Simulator
+
+`sim.py` sends made-up outings to `API_URL`, so the app gets live data without hardware. It needs only Python 3.9 or newer, no packages:
+
+```bash
+export API_URL=http://localhost:8000
+python3 sim.py live --user demo --minutes 15   # an outing in real time: the track, glasses pinning litter, the grabber picking it
+python3 sim.py live --role scout --speed 10    # a scout only pins litter, ten times faster
+python3 sim.py backfill                        # outings of 9 other users over the last 5 days, for the leaderboard and the map
+python3 sim.py record <session_id> walk.json   # save a real outing with the picks and sightings of its devices
+python3 sim.py replay walk.json                # send it again from now as a new outing, if the hardware fails on stage
+```
+
+- Ctrl+C ends a live outing at once with `session.end`.
+- Simulated devices are named `sim-phone-…`, `sim-grabber-…` and `sim-glasses-…`, so they never take picks from real devices, and their events are easy to find and delete.
+- `backfill` with the same `--seed` sends the same events, and the API stores them once.
+- On the shared API a live outing fills the events page at `/` and hides real devices there: run it locally when you can.

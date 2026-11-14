@@ -232,6 +232,9 @@ export async function mountRaccoon(el, { win = false } = {}) {
     worldRot(b.earr, X, -0.6 * tw);
     // Tail: yaw = side to side, lift = tip up; each bone lags the one before, so it waves
     const tYaw = [0, 0, 0], tLift = [0, 0, 0], TW = [0.55, 0.8, 1.0];
+    // Rest pose of the tail: curled round to the side (viewer's right), as in the reference
+    const TS = [1.0, 0.6, 0.35];
+    for (let i = 0; i < 3; i++) tYaw[i] -= TS[i];
     for (let i = 0; i < 3; i++) {
       tYaw[i] += k * 0.2 * TW[i] * Math.sin(t * W0 * 2 - i * 0.7);
       tLift[i] += k * (0.03 + 0.03 * Math.sin(t * W0 - i * 0.5)) * TW[i];

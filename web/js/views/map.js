@@ -1,10 +1,9 @@
 // Map: open litter spots and the start button. Start records the outing right here, like Strava:
 // the map follows you and draws your route, a panel shows time, distance and points, with Pause and Finish.
 // Recording itself is in recorder.js; points come from the picks the API puts on the outing (game.js rules).
-// While "you" record an outing on another device, "Live outing" leads to its live screen.
 // Clusters, zones and Plogger / Scout are in web/README.md, "Screens".
 
-import { api, currentUser, liveOuting, poll } from "../api.js";
+import { api, currentUser, poll } from "../api.js";
 import { esc, LITTER, ago, clock, icon } from "../ui.js";
 import { createMap, spotMarker } from "../map.js";
 import { POINTS_PER_ITEM, POINTS_PER_PIN } from "../game.js";
@@ -19,7 +18,6 @@ export default async function render(el) {
       <div><span class="big" id="open-count">…</span><span class="unit">spots to clean</span></div>
       <div class="map-actions">
         <button class="btn" id="start">${icon("play", 18)}Start outing</button>
-        <a class="btn dark" id="live" href="#/outing/live" hidden>Live outing</a>
       </div>
       <p class="muted" id="idle-note" hidden></p>
     </div>
@@ -218,18 +216,11 @@ export default async function render(el) {
     return true;
   }, 2000);
 
-  // "Live outing": an outing of "you" recorded on another device.
-  const stopLive = poll(async () => {
-    const live = await liveOuting();
-    $("#live").hidden = !live || live.session_id === recorder.current()?.session_id;
-  }, 5000);
-
   return () => {
     stopRecorder();
     clearInterval(ticker);
     clearTimeout(finishArmed);
     stopPicks();
-    stopLive();
     map.remove();
   };
 }

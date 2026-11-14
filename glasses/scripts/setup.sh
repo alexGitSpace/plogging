@@ -46,6 +46,21 @@ if [ ! -f "$ios/demo.mp4" ]; then
 fi
 cp "$ios/demo.mp4" "$android/demo.mp4"
 
+# 3. MediaPipe hand skeleton, used by the Android app to see a hand closing on litter.
+hand="$android/hand_landmarker.task"
+expected_hand="fbc2a30080c3c557093b5ddfc334698132eb341044ccee322ccf8bcf3607cde1"
+if [ ! -f "$hand" ] || [ "$(shasum -a 256 "$hand" | awk '{print $1}')" != "$expected_hand" ]; then
+  echo "Downloading the hand landmarker..."
+  curl --fail --location --retry 8 --retry-all-errors --retry-delay 2 \
+    --output "$hand" \
+    "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task"
+  actual="$(shasum -a 256 "$hand" | awk '{print $1}')"
+  if [ "$actual" != "$expected_hand" ]; then
+    echo "Hand landmarker checksum mismatch: $actual" >&2
+    exit 1
+  fi
+fi
+
 echo "Ready:"
 echo "  $ios/Detector.mlpackage and $ios/demo.mp4"
-echo "  $android/detector.onnx and $android/demo.mp4"
+echo "  $android/detector.onnx, $android/demo.mp4 and $hand"

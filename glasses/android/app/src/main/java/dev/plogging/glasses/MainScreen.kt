@@ -1,6 +1,9 @@
 package dev.plogging.glasses
 
+import android.content.Context
 import android.graphics.Bitmap
+import android.view.View
+import android.webkit.WebView
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
@@ -20,6 +23,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -37,6 +41,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -62,6 +67,7 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlin.math.max
 import kotlin.math.roundToInt
@@ -84,6 +90,8 @@ fun MainScreen(
 ) {
   val state by viewModel.uiState.collectAsStateWithLifecycle()
   val frame by viewModel.frame.collectAsStateWithLifecycle()
+  val displayStatus by viewModel.displayStatus.collectAsStateWithLifecycle()
+  val displayPreview by viewModel.displayPreview.collectAsStateWithLifecycle()
   var menuOpen by remember { mutableStateOf(false) }
   BackHandler(enabled = menuOpen) { menuOpen = false }
 
@@ -91,7 +99,13 @@ fun MainScreen(
     val landscape = maxWidth > maxHeight
 
     if (frame != null) {
-      FrameView(frame!!, state.detections, fitInside = landscape, modifier = Modifier.fillMaxSize())
+      FrameView(
+          frame!!,
+          state.detections,
+          state.hands,
+          fitInside = landscape,
+          modifier = Modifier.fillMaxSize(),
+      )
     } else {
       EmptyViewfinder(state.isRunning, state.needsRegistration)
     }
@@ -109,8 +123,12 @@ fun MainScreen(
     )
 
     Column(modifier = Modifier.fillMaxSize().padding(horizontal = 18.dp, vertical = 16.dp)) {
-      HudTopBar(state = state, onMenu = { menuOpen = !menuOpen })
+      HudTopBar(state = state, onMenu = { menuOpen = !menuOpen }, onRecord = viewModel::toggleRecording)
+      state.recordingMessage?.let { message ->
+        Text(message, color = Leaf, fontSize = 12.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(top = 6.dp))
+      }
       PickBanner(state.lastPick)
+      displayStatus?.let { GlassesDisplay(it, displayPreview, Modifier.padding(top = 10.dp)) }
       Spacer(Modifier.weight(1f))
       if (landscape) {
         Row(
@@ -203,7 +221,7 @@ private fun EmptyViewfinder(isRunning: Boolean, needsRegistration: Boolean) {
 }
 
 @Composable
-private fun HudTopBar(state: UiState, onMenu: () -> Unit) {
+private fun HudTopBar(state: UiState, onMenu: () -> Unit, onRecord: () -> Unit) {
   Row(
       modifier = Modifier.fillMaxWidth(),
       verticalAlignment = Alignment.CenterVertically,
@@ -228,6 +246,30 @@ private fun HudTopBar(state: UiState, onMenu: () -> Unit) {
     }
 
     Row(verticalAlignment = Alignment.CenterVertically) {
+      if (state.isRunning) {
+        Surface(
+            modifier = Modifier.height(36.dp).clickable(onClick = onRecord)
+                .semantics { contentDescription = if (state.isRecording) "Stop recording" else "Record glasses and display" },
+            shape = RoundedCornerShape(50),
+            color = if (state.isRecording) Coral else NightSurface,
+            border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.12f)),
+        ) {
+          Row(
+              modifier = Modifier.padding(horizontal = 12.dp),
+              verticalAlignment = Alignment.CenterVertically,
+          ) {
+            Box(Modifier.size(8.dp).clip(CircleShape).background(if (state.isRecording) Color.White else Coral))
+            Spacer(Modifier.width(6.dp))
+            Text(
+                "REC",
+                color = if (state.isRecording) Color.White else Mist,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+            )
+          }
+        }
+        Spacer(Modifier.width(8.dp))
+      }
       if (state.isRunning || state.picks > 0) {
         Surface(
             shape = RoundedCornerShape(50),
@@ -282,6 +324,45 @@ private fun PickBanner(lastPick: Pick?) {
         fontWeight = FontWeight.Bold,
         modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
     )
+  }
+}
+
+/** What the display of the glasses is doing. Simulated glasses show the display itself too. */
+@Composable
+private fun GlassesDisplay(
+    status: String,
+    preview: ((Context) -> View)?,
+    modifier: Modifier = Modifier,
+) {
+  Surface(
+      modifier = modifier,
+      color = NightSurface,
+      shape = RoundedCornerShape(14.dp),
+      border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.13f)),
+  ) {
+    Row(Modifier.padding(10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+      if (preview != null) {
+        key(preview) {
+          // The display is 600 wide and the view shrinks it to a quarter at most: 150 dp shows it whole.
+          AndroidView(
+              factory = preview,
+              modifier = Modifier.size(150.dp).clip(RoundedCornerShape(8.dp)).background(Color.Black),
+              onRelease = { (it as? WebView)?.destroy() },
+          )
+        }
+      }
+      Column(Modifier.widthIn(max = 140.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+        Text("GLASSES DISPLAY", color = Moss, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
+        Text(
+            status,
+            color = Mist,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Medium,
+            maxLines = 4,
+            overflow = TextOverflow.Ellipsis,
+        )
+      }
+    }
   }
 }
 
@@ -529,6 +610,7 @@ private fun SourceOption(kind: SourceKind, selected: Boolean, enabled: Boolean, 
 private fun FrameView(
     frame: Bitmap,
     detections: List<Detection>,
+    hands: List<HandPose>,
     fitInside: Boolean,
     modifier: Modifier = Modifier,
 ) {
@@ -569,8 +651,29 @@ private fun FrameView(
         drawText(label, topLeft = Offset(tagLeft + padding, tagTop + 1f))
       }
     }
+
+    fun at(x: Float, y: Float) = Offset(cropX + x * drawnWidth, cropY + y * drawnHeight)
+    for (hand in hands) {
+      if (hand.points.size < 21) continue
+      for ((start, end) in HAND_EDGES) {
+        drawLine(Color.White, at(hand.points[start].x, hand.points[start].y), at(hand.points[end].x, hand.points[end].y), 2.dp.toPx())
+      }
+      for (point in hand.points) {
+        drawCircle(Leaf, 3.dp.toPx(), at(point.x, point.y))
+      }
+    }
   }
 }
+
+private val HAND_EDGES =
+    listOf(
+        0 to 1, 1 to 2, 2 to 3, 3 to 4,
+        0 to 5, 5 to 6, 6 to 7, 7 to 8,
+        0 to 9, 9 to 10, 10 to 11, 11 to 12,
+        0 to 13, 13 to 14, 14 to 15, 15 to 16,
+        0 to 17, 17 to 18, 18 to 19, 19 to 20,
+        5 to 9, 9 to 13, 13 to 17,
+    )
 
 /** The same colour for the same class on every frame. */
 private fun colorFor(label: String): Color {
@@ -586,11 +689,10 @@ private fun reportLine(state: UiState): String {
 }
 
 private fun motionLine(state: UiState): String {
-  val stats = "${state.detectionsPerSecond} fps  ·  ${state.inferenceMilliseconds.roundToInt()} ms"
+  val parts = mutableListOf("${state.detectionsPerSecond} fps  ·  ${state.inferenceMilliseconds.roundToInt()} ms")
   val tilt = state.tiltDegrees
-  return when {
-    tilt != null -> "$stats  ·  tilt ${tilt.roundToInt()}°"
-    state.isRunning -> "$stats  ·  pick detection off"
-    else -> stats
-  }
+  if (tilt != null) parts += "tilt ${tilt.roundToInt()}°"
+  else if (state.isRunning) parts += "pick detection off"
+  parts += if (state.handTracking) "hands ${state.hands.size}" else "hands off"
+  return parts.joinToString("  ·  ")
 }

@@ -37,7 +37,7 @@ android {
   }
 
   // The model and the demo video are read straight from the APK.
-  androidResources { noCompress += listOf("onnx", "mp4") }
+  androidResources { noCompress += listOf("onnx", "mp4", "task") }
 
   packaging { resources { excludes += "/META-INF/{AL2.0,LGPL2.1}" } }
 }
@@ -52,8 +52,10 @@ dependencies {
   implementation(libs.androidx.material3)
   implementation(libs.mwdat.core)
   implementation(libs.mwdat.camera)
+  implementation(libs.mwdat.display)
   implementation(libs.mwdat.motion)
   implementation(libs.mwdat.mockdevice)
   implementation(libs.onnxruntime.android)
+  implementation(libs.mediapipe.tasks.vision)
   testImplementation(libs.junit)
 }

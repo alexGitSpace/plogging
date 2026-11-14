@@ -39,6 +39,37 @@ class PickDetectorTest {
   }
 
   @Test
+  fun closingTheHandOnACupCountsOnePick() {
+    val detector = PickDetector()
+    val cup = Detection("Cup", 0.9f, 0.35f, 0.25f, 0.65f, 0.7f)
+    assertNull(detector.onFrame(listOf(cup), listOf(pose(0.30f)), 0L))
+    assertNull(detector.onFrame(listOf(cup), emptyList(), 40L))
+    val pick = detector.onFrame(listOf(cup), listOf(pose(0.58f)), 200L)
+    assertEquals("Cup", pick?.label)
+    assertNull(detector.onFrame(listOf(cup), listOf(pose(0.58f)), 400L))
+  }
+
+  @Test
+  fun aHandThatMissesTheCupCountsNothing() {
+    val detector = PickDetector()
+    val cup = Detection("Cup", 0.9f, 0.7f, 0.7f, 0.9f, 0.9f)
+    repeat(4) { index ->
+      assertNull(detector.onFrame(listOf(cup), listOf(pose(0.30f)), index * 200L))
+    }
+  }
+
+  @Test
+  fun cupDisappearingUnderTheHandCountsOnePick() {
+    val detector = PickDetector()
+    val cup = Detection("Cup", 0.9f, 0.35f, 0.25f, 0.65f, 0.7f)
+    val hand = pose(0.45f)
+    assertNull(detector.onFrame(listOf(cup), listOf(hand), 0L))
+    assertNull(detector.onFrame(listOf(cup), listOf(hand), 200L))
+    val pick = detector.onFrame(emptyList(), listOf(hand), 500L)
+    assertEquals("Cup", pick?.label)
+  }
+
+  @Test
   fun oneLongBendCountsOnePick() {
     val detector = PickDetector()
     val clock = Clock()
@@ -82,6 +113,14 @@ class PickDetectorTest {
       ms += 1
       return pick
     }
+  }
+
+  private fun pose(tipY: Float): HandPose {
+    val points = MutableList(21) { HandPoint(0.5f, 0.62f) }
+    points[0] = HandPoint(0.5f, 0.62f)
+    points[9] = HandPoint(0.5f, 0.52f)
+    for (index in intArrayOf(4, 8, 12, 16, 20)) points[index] = HandPoint(0.5f, tipY)
+    return HandPose(points)
   }
 
   private companion object {

@@ -8,27 +8,30 @@ import org.junit.Test
 class PickDetectorTest {
 
   @Test
-  fun bendWithLitterCountsNothing() {
+  fun bendWithLitterCountsOnePick() {
     val detector = PickDetector()
     val clock = Clock()
     clock.stand(detector, 20)
     clock.see(detector, "Bottle")
     clock.see(detector, "Bottle")
-    assertTrue(clock.bend(detector, 12).isEmpty())
+    val picks = clock.bend(detector, 12)
+    assertEquals(1, picks.size)
+    assertEquals("Bottle", picks[0].label)
   }
 
   @Test
-  fun twoBendsTowardLitterCountNothing() {
+  fun twoBendsTowardLitterCountTwoPicks() {
     val detector = PickDetector()
     val clock = Clock()
     clock.stand(detector, 20)
     clock.see(detector, "Bottle")
     clock.see(detector, "Bottle")
-    assertTrue(clock.bend(detector, 12).isEmpty())
+    val first = clock.bend(detector, 12)
     clock.stand(detector, 20)
     clock.see(detector, "Can")
     clock.see(detector, "Can")
-    assertTrue(clock.bend(detector, 12).isEmpty())
+    val second = clock.bend(detector, 12)
+    assertEquals(listOf("Bottle", "Can"), (first + second).map { it.label })
   }
 
   @Test
@@ -60,10 +63,18 @@ class PickDetectorTest {
     assertNull(detector.onFrame(listOf(cup), open, 80L))
     assertNull(detector.onFrame(listOf(cup), open, 160L))
     assertNull(detector.onFrame(listOf(cup), emptyList(), 200L))
-    assertNull(detector.onFrame(listOf(cup), closed, 240L))
-    val pick = detector.onFrame(listOf(cup), closed, 280L)
+    val pick = detector.onFrame(listOf(cup), closed, 240L)
     assertEquals("Cup", pick?.label)
-    assertNull(detector.onFrame(listOf(cup), closed, 400L))
+    assertNull(detector.onFrame(listOf(cup), closed, 280L))
+  }
+
+  @Test
+  fun aHandAlreadyClosedOnACupCountsOnePick() {
+    val detector = PickDetector()
+    val closed = listOf(pose(0.47f, wristY = 0.45f, palm = 0.05f))
+    assertNull(detector.onFrame(listOf(CUP), closed, 0L))
+    val pick = detector.onFrame(listOf(CUP), closed, 100L)
+    assertEquals("Cup", pick?.label)
   }
 
   @Test
@@ -114,14 +125,14 @@ class PickDetectorTest {
     assertNull(detector.onFrame(listOf(cup), open, 0L))
     assertNull(detector.onFrame(listOf(cup), open, 80L))
     assertNull(detector.onFrame(listOf(cup), open, 160L))
-    assertNull(detector.onFrame(listOf(cup), closed, 200L))
-    assertNull(detector.onFrame(emptyList(), closed, 250L))
-    val pick = detector.onFrame(emptyList(), down, 650L)
+    val pick = detector.onFrame(listOf(cup), closed, 200L)
     assertEquals("Cup", pick?.label)
+    assertNull(detector.onFrame(emptyList(), closed, 250L))
+    assertNull(detector.onFrame(emptyList(), down, 650L))
   }
 
   @Test
-  fun oneLongBendCountsNothing() {
+  fun oneLongBendCountsOnePick() {
     val detector = PickDetector()
     val clock = Clock()
     clock.stand(detector, 20)
@@ -132,7 +143,8 @@ class PickDetectorTest {
       clock.see(detector, "Can")?.let(picks::add)
       clock.sample(detector, BENT_X, BENT_Y, BENT_Z)?.let(picks::add)
     }
-    assertTrue(picks.isEmpty())
+    assertEquals(1, picks.size)
+    assertEquals("Can", picks[0].label)
   }
 
   private class Clock {

@@ -1,14 +1,20 @@
-// Map: open litter spots for now. Clusters, zones, Plogger / Scout and the bottom card are in web/README.md, "Screens".
+// Map: open litter spots, a start button and, while "you" record an outing, a way to its live screen.
+// Clusters, zones and Plogger / Scout are in web/README.md, "Screens".
 
-import { api } from "../api.js";
+import { api, liveOuting, poll, recordUrl } from "../api.js";
 import { esc, LITTER, ago, icon } from "../ui.js";
 import { createMap, spotMarker } from "../map.js";
 
 export default async function render(el) {
+  // The outing is recorded on the phone by a page the API serves; a new tab keeps this one open.
   el.innerHTML = `<div class="map" id="map"></div>
     <div class="map-overlay card" style="left:24px;bottom:24px;min-width:280px">
       <div class="eyebrow">Litter nearby</div>
       <div><span class="big" id="open-count">…</span><span class="unit">spots to clean</span></div>
+      <div class="map-actions">
+        <a class="btn" href="${esc(recordUrl())}" target="_blank" rel="noopener">${icon("play", 18)}Start outing</a>
+        <a class="btn dark" id="live" href="#/outing/live" hidden>Live outing</a>
+      </div>
     </div>
     <button class="map-overlay locate-btn" id="locate" title="Show where I am" aria-label="Show where I am">${icon("locate", 22)}</button>`;
   const map = createMap(el.querySelector("#map"));
@@ -51,5 +57,12 @@ export default async function render(el) {
     el.querySelector(".map-overlay").insertAdjacentHTML("beforeend", `<p class="muted">${esc(err.message)}</p>`);
   }
 
-  return () => map.remove();
+  const stopLive = poll(async () => {
+    el.querySelector("#live").hidden = !(await liveOuting());
+  }, 5000);
+
+  return () => {
+    stopLive();
+    map.remove();
+  };
 }

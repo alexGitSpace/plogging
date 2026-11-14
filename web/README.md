@@ -74,14 +74,15 @@ What the API does not have, and how the mockup's parts map onto it:
 - **"Grabber connected", "glasses ready"**: the API does not know device connections; static text.
 - **Starting an outing**: the phone records it on a page the API serves; the start button links to `{API_URL}/record?user=<nickname>` ([api/README.md](../api/README.md#recording-an-outing)).
 
-### To do: `#/outing/live`
+### Live outing: `#/outing/live`
 
-Today the live screen needs the outing's `session_id` in the address, copied by hand from the phone. For the demo, `#/outing/live` should open the live outing of the selected user by itself:
+The map's **Start outing** opens `{API_URL}/record?user=<you>` in a new tab: the outing is recorded on the phone. While the selected user has a live outing, the map also shows **Live outing**, which leads to `#/outing/live`.
 
-- Find it with `api.outings({ user_id: currentUser(), limit: 5 })`: outings come newest first, so take the first with `live: true`, and show it as `#/outing/<id>` does. No API change needed.
-- With no live outing yet, say so ("No live outing for Anya K. · start one on the phone") and keep looking every few seconds with `poll()`. Then the screen can be opened on the laptop before the walk starts, and the outing appears by itself.
-- When the outing ends, go to its summary, `#/done/<id>`.
-- The map can show a "Live outing" button that leads here while the selected user has a live outing.
+`#/outing/live` opens the live outing of the selected user by itself (the first with `live: true` in `api.outings({ user_id, limit: 5 })`), so nobody copies a `session_id` from the phone:
+
+- With no live outing yet, it says so and keeps looking: open it on the laptop before the walk starts, and the outing appears by itself.
+- When the outing ends, it goes to the summary, `#/done/<id>`.
+- `#/outing/<id>` still shows one outing by its id and stays on it when it ends.
 
 To try it without a phone: open `{API_URL}/record?fake` in another tab, or run `python3 api/sim.py live --user <nickname>`, which prints the outing's id when it starts.
 

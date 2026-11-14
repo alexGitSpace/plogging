@@ -1,7 +1,7 @@
 [project]
 name = "api"
 version = "0.1.0"
-description = "Plogging API: receives events from all parts and serves them"
+description = "Plokka API: receives events from all parts and serves them"
 requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.162.5",

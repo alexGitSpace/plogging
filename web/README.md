@@ -24,7 +24,7 @@ The API address stays out of git: the API has no authentication yet. Ask in the 
 `Dockerfile` serves the folder with Caddy on `$PORT` (8080 by default). Set `API_URL` in the host's environment: the container writes it into `js/config.js` when it starts. On Railway: a service from this repository with Root Directory `/web` and Watch Paths `/web/**`, the variable `API_URL`, and a generated domain. Every push to `main` that touches `web/` redeploys it.
 
 ```bash
-docker build -t plogging-web web && docker run -p 8080:8080 -e API_URL=https://… plogging-web
+docker build -t plokka-web web && docker run -p 8080:8080 -e API_URL=https://… plokka-web
 ```
 
 ## Layout

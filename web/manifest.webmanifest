@@ -1,6 +1,6 @@
 {
-  "name": "Plogging",
-  "short_name": "Plogging",
+  "name": "Plokka",
+  "short_name": "Plokka",
   "start_url": "./#/map",
   "display": "standalone",
   "background_color": "#ffffff",

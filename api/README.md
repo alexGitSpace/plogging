@@ -14,7 +14,7 @@ uv run pytest -q                                   # tests, including every file
 uv run ruff format . && uv run ruff check .        # format and lint
 ```
 
-Or in Docker: `docker build -t plogging-api . && docker run -p 8000:8000 -v plogging-data:/data plogging-api`.
+Or in Docker: `docker build -t plokka-api . && docker run -p 8000:8000 -v plokka-data:/data plokka-api`.
 
 | Variable | Default | Meaning |
 |---|---|---|

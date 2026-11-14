@@ -1,0 +1,17 @@
+{
+  "users": [
+    {
+      "rank": 1,
+      "user_id": "user-1",
+      "outings": 1,
+      "stats": {
+        "duration_s": 120,
+        "distance_m": 52,
+        "picks": 1,
+        "spots_cleaned": 1,
+        "spots_pinned": 0,
+        "litter": {"bottle": 1}
+      }
+    }
+  ]
+}

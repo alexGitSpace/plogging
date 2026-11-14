@@ -1,0 +1,20 @@
+{
+  "outings": [
+    {
+      "session_id": "f38b2ffc-80a4-4f5a-91c9-bc701e7ea419",
+      "user_id": "user-1",
+      "role": "plogger",
+      "started_at": 1794654000000,
+      "ended_at": 1794654120000,
+      "live": false,
+      "stats": {
+        "duration_s": 120,
+        "distance_m": 52,
+        "picks": 1,
+        "spots_cleaned": 1,
+        "spots_pinned": 0,
+        "litter": {"bottle": 1}
+      }
+    }
+  ]
+}

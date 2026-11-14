@@ -40,6 +40,7 @@ docker build -t plogging-web web && docker run -p 8080:8080 -e API_URL=https://â
 | `js/ui.js` | `esc()`, formatting (`km`, `duration`, `clock`, `ago`), litter names and icons |
 | `js/game.js` | Game rules: points, streaks, daily and weekly quests, Claim, badges, leaderboard scopes. Also `data`, the API with a fallback to test data |
 | `js/mock.js` | Test users: full names, neighbourhoods, friends, people from other cities, and made-up outings when the API is down |
+| `js/raccoon.js` | The 3D raccoon (`assets/raccoon.glb`, model 12): idle and the victory jump with confetti, all procedural on its bones |
 | `js/widgets.js` | Avatars, progress bars, the goal ring, hexagon badges and the SVG mini map of a route |
 | `css/screens.css` | Styles of Feed, Quests, Leaderboard and Profile |
 | `js/views/` | One module per screen |

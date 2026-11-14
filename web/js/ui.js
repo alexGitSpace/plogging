@@ -63,6 +63,8 @@ const ICON_PATHS = {
   grabber: '<path d="M6 20 17 5M17 5l2.5 1M17 5l-.5 2.6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
   glasses: '<circle cx="7" cy="13" r="3.5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="17" cy="13" r="3.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M10.5 13h3" stroke="currentColor" stroke-width="2"/>',
   play: '<path d="M8 5v14l11-7z"/>',
+  pause: '<rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/>',
+  flag: '<path d="M5 21V4M5 4h12l-2.5 4L17 12H5" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>',
   locate: '<path d="M20 4 3 11l7 2 2 7z"/>',
   pin: '<path d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/>',
 };

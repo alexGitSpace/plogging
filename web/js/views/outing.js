@@ -3,8 +3,8 @@
 // and goes to its summary when it ends, so the screen can be opened on the laptop before the walk.
 // To do (web/README.md, "Screens"): the nearest spot, the "just picked +10 pts" toast, quest progress, open spots around.
 
-import { api, currentUser, liveOuting, poll, recordUrl } from "../api.js";
-import { clock, esc, icon, km } from "../ui.js";
+import { api, currentUser, liveOuting, poll } from "../api.js";
+import { clock, esc, km } from "../ui.js";
 import { createMap } from "../map.js";
 
 const L = window.L;
@@ -20,10 +20,7 @@ export default async function render(el, param) {
     </div>
     <div class="map-overlay card" id="waiting" style="left:24px;right:24px;top:24px;max-width:520px" hidden>
       <div class="eyebrow">Waiting for an outing</div>
-      <p style="margin:8px 0 0">No live outing for <b>${esc(currentUser() || "anyone")}</b> yet. Start one on the phone: it shows up here by itself.</p>
-      <div class="map-actions">
-        <a class="btn" href="${esc(recordUrl())}" target="_blank" rel="noopener">${icon("play", 18)}Start outing</a>
-      </div>
+      <p style="margin:8px 0 0">No live outing for <b>${esc(currentUser() || "anyone")}</b> yet. Start one on the Map on the phone: it shows up here by itself.</p>
     </div>
     <div class="map-overlay" style="left:24px;top:150px"><span class="pill dark" id="state">Loading…</span></div>`;
   const $ = (sel) => el.querySelector(sel);

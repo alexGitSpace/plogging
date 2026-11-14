@@ -44,13 +44,6 @@ export const api = {
   leaderboard: ({ since } = {}) => get("/api/leaderboard", { since }).then((d) => d.users),
 };
 
-// The phone page that records an outing (api/README.md, "Recording an outing"), with "you" as the nickname.
-export function recordUrl() {
-  const url = new URL(API_URL + "/record");
-  if (user) url.searchParams.set("user", user);
-  return url.href;
-}
-
 // The newest outing of "you" that is still being recorded, or null.
 export async function liveOuting() {
   const outings = await api.outings({ user_id: user, limit: 5 });

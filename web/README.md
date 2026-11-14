@@ -15,6 +15,7 @@ cd web && python3 -m http.server 5173   # http://localhost:5173
 | API address | `?api=https://…` in the page address, remembered in the browser (`?api=default` forgets it); or `js/config.js` (copy `js/config.example.js`, not in git) | `http://localhost:8000` |
 | You | `?user=<nickname>`, or the selector at the bottom of the sidebar | The leader of the leaderboard |
 | Test data | `?mock` shows Feed, Quests, Leaders and Profile on the test users of `js/mock.js`. Without the API they use them by themselves | Off |
+| Fake GPS | `?fake` makes up a walk around Otaniemi while recording, to try it indoors. Its outings are real outings in the API: use a test nickname | Off |
 
 The API address stays out of git: the API has no authentication yet. Ask in the team chat. The shared API already holds simulated outings of 10 people; for a live outing, run `python3 api/sim.py live` ([api/README.md](../api/README.md#simulator)).
 
@@ -34,6 +35,7 @@ docker build -t plogging-web web && docker run -p 8080:8080 -e API_URL=https://�
 | `css/app.css` | Colours and shapes from the mockup as variables on `:root`, plus shared classes: `card`, `big`, `eyebrow`, `pill`, `btn`, `avatar`, `grid-2`, `grid-3` |
 | `js/main.js` | Sidebar and router on `#/feed`, `#/quests`, `#/map`, `#/leaders`, `#/profile`, `#/outing/<session_id>`, `#/done/<session_id>` |
 | `js/api.js` | One function per API request, `poll()` for live screens, `weekStart()` for "this week", and the two settings |
+| `js/recorder.js` | Records an outing in this browser and sends it as events: the phone's part of the contract |
 | `js/map.js` | A Leaflet map in the light style of the mockup |
 | `js/ui.js` | `esc()`, formatting (`km`, `duration`, `clock`, `ago`), litter names and icons |
 | `js/game.js` | Game rules: points, streaks, daily and weekly quests, Claim, badges, leaderboard scopes. Also `data`, the API with a fallback to test data |
@@ -58,7 +60,7 @@ From the mockup, and where each takes its data. Feed, Quests, Leaderboard and Pr
 
 | Screen | In the mockup | Data |
 |---|---|---|
-| Map `#/map` | Spots as dots and clusters with a count; Plogger / Scout switch; "Litter nearby: 27 spots to clean"; start button | `api.spots()`; pollution zones (below) |
+| Map `#/map` | Spots as dots and clusters with a count; Plogger / Scout switch; "Litter nearby: 27 spots to clean"; start button. While recording: time, points, distance, Pause / Finish | `api.spots()`; pollution zones (below); `recorder.js` and `api.outing(id)` for points |
 | Live outing `#/outing/<id>` | Time, distance, picked; the route; nearest spot; "Just picked · +10 pts"; daily quest progress; Pause / Finish | `api.outing(id)` polled, `api.spots()`. Done: stats, route, picks |
 | Summary `#/done/<id>` | The character; "Challenge complete"; points and streak; spots, distance, time; "You're now #3 in Espoo · +2" | `api.outing(id)`, `api.leaderboard()` |
 | Feed `#/feed` | This week (time, items, km); the "Clean Otaniemi" challenge; friends' outings with a mini map | `api.outings({ user_id, since: weekStart() })`; `api.outings({ limit })`, `api.outing(id)` for the route |
@@ -72,11 +74,20 @@ What the API does not have, and how the mockup's parts map onto it:
 - **Place names** ("Leppävaara, Espoo"): static text, or reverse geocoding in the app.
 - **Litter photos**: an icon by `litter_type`.
 - **"Grabber connected", "glasses ready"**: the API does not know device connections; static text.
-- **Starting an outing**: the phone records it on a page the API serves; the start button links to `{API_URL}/record?user=<nickname>` ([api/README.md](../api/README.md#recording-an-outing)).
+
+### Recording an outing
+
+**Start outing** on the map records the outing right there, as Strava does: the map follows you and draws your route, and a panel shows time, points and distance with **Pause** and **Finish** (tap twice). Finish goes to the summary, `#/done/<id>`.
+
+- `js/recorder.js` sends `session.start`, the GPS track as `track.points` every 5 seconds, and `session.end`, as the API's `/record` page does ([api/README.md](../api/README.md#recording-an-outing)). The outing is "you" as a plogger with `grabber-1` and `glasses-1`.
+- Points are the picks and pins the API puts on the outing (`game.js` rules), polled every 2 seconds; a new pick shows "+10 pts".
+- Events wait in the browser until the API accepts them, so a lost connection loses nothing, and a reload carries the outing on. Recording goes on on other tabs of the app; Map shows a red dot meanwhile.
+- Pause is the app's own: the timer stops and no track is recorded. The contract has no pause event, so the API's `duration_s` still counts the pause.
+- The location needs HTTPS or localhost. Phones stop reporting it when the screen locks, so the page asks to keep the screen on.
 
 ### Live outing: `#/outing/live`
 
-The map's **Start outing** opens `{API_URL}/record?user=<you>` in a new tab: the outing is recorded on the phone. While the selected user has a live outing, the map also shows **Live outing**, which leads to `#/outing/live`.
+For watching an outing recorded on another device, for example on the laptop during the demo. While the selected user has a live outing that this browser is not recording, the map shows **Live outing**, which leads to `#/outing/live`.
 
 `#/outing/live` opens the live outing of the selected user by itself (the first with `live: true` in `api.outings({ user_id, limit: 5 })`), so nobody copies a `session_id` from the phone:
 
@@ -84,7 +95,7 @@ The map's **Start outing** opens `{API_URL}/record?user=<you>` in a new tab: the
 - When the outing ends, it goes to the summary, `#/done/<id>`.
 - `#/outing/<id>` still shows one outing by its id and stays on it when it ends.
 
-To try it without a phone: open `{API_URL}/record?fake` in another tab, or run `python3 api/sim.py live --user <nickname>`, which prints the outing's id when it starts.
+To try it without a phone: record with `?fake` in another browser, or run `python3 api/sim.py live --user <nickname>`, which prints the outing's id when it starts.
 
 ### Pollution zones
 

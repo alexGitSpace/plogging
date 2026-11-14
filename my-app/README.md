@@ -2,7 +2,12 @@
 
 Hold the button for more than 1 second and the on-board RGB LED 3 blinks
 green twice (200 ms on / 200 ms off). It fires once per press: release the
-button before the next long press. All logic is in `sketch/sketch.ino`.
+button before the next long press. On each long press the sketch
+(`sketch/sketch.ino`) also notifies the Linux side (`python/main.py`), which
+makes a web request to `https://httpbin.org/get` and prints the outcome.
+
+The blink does not depend on the network: it comes at once, even offline.
+Only the log tells whether the request went through.
 
 Deploy from the `projects/` directory: `./deploy.sh my-app`
 
@@ -62,3 +67,44 @@ blink does not come, squeeze the connectors tighter or go back to step 1.
 - LED is on all the time and goes *off* twice on a long press: the LED
   polarity is inverted on your core version; swap `LOW`/`HIGH` in
   `set_led()` in the sketch.
+
+## Connecting the board to Wi-Fi
+
+Wi-Fi belongs to the Linux side of the UNO Q and is remembered by the OS, so
+this is done once per network, not by the app. Open a shell on the board
+(`adb shell` on the host) and run:
+
+```sh
+nmcli device wifi list                           # is your network visible?
+sudo nmcli --ask device wifi connect "MY_SSID"   # prompts for the password
+```
+
+`--ask` keeps the password out of the shell history. The board reconnects
+by itself after a reboot. Check the result:
+
+```sh
+nmcli device status           # the wifi line should say "connected"
+curl -I https://httpbin.org/get   # first line should end in 200
+```
+
+Wrong password or network? `sudo nmcli connection delete "MY_SSID"` and
+connect again.
+
+## Watching the web requests
+
+On the host, follow the Python side's output:
+
+```sh
+adb shell "docker logs -f my-app-main-1"
+```
+
+Each long press prints one line:
+
+```
+long press 1: GET https://httpbin.org/get -> OK, HTTP 200 (0.5 s)
+long press 2: GET https://httpbin.org/get -> FAILED, <urlopen error ...> (0.0 s)
+```
+
+`OK` means the server answered with a 2xx status. `FAILED` shows the reason
+(no Wi-Fi, DNS, timeout after 10 s, or an HTTP error status). The counter
+starts again at 1 whenever the sketch restarts.

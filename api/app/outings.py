@@ -74,7 +74,7 @@ def build(events: list[dict]) -> Log:
     timeline = []  # (t, kind, event, outing)
     for p in picks:
         if o := _owner(outings.values(), p):
-            pick = {"t": p["t"]} | position_at(o.route, p["t"]) | {"litter_type": None, "spot_id": None}
+            pick = {"t": p["t"]} | position_at(o.route, p["t"]) | {"litter_type": p.get("litter_type"), "spot_id": None}
             o.picks.append(pick)
             timeline.append((p["t"], "pick", pick, o))
     for s in sightings:  # Moved earlier by SKEW_MS, so that a pick stamped just before its sighting still finds it
@@ -170,7 +170,8 @@ def _owner(outings, e: dict) -> Outing | None:
 
 
 def _spots(timeline: list[tuple]) -> list[dict]:
-    """Spots are litter the glasses saw. A pick cleans the nearest open spot around it and takes its litter type."""
+    """Spots are litter the glasses saw. A pick cleans the nearest open spot around it and takes its litter type:
+    the glasses see better than the grabber's camera. A pick that cleans nothing keeps the type the grabber sent."""
     spots: list[dict] = []
     open_spots: list[dict] = []
     for _, kind, e, o in timeline:

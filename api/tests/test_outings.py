@@ -2,7 +2,7 @@ import json
 import uuid
 from pathlib import Path
 
-from app.outings import IDLE_END_MS, STEP_M, build, position_at
+from app.outings import IDLE_END_MS, STEP_M, build, position_at, stats
 
 EXAMPLES = Path(__file__).resolve().parents[2] / "contract" / "examples"
 T0 = 1794654000000  # session.start in outing.json
@@ -18,8 +18,8 @@ def event(type_: str, t: int, device_id: str = "phone-1", **fields) -> dict:
     return {"event_id": str(uuid.uuid4()), "type": type_, "device_id": device_id, "t": t} | fields
 
 
-def pick(t: int, device_id: str = "grabber-1") -> dict:
-    return event("pick", t, device_id)
+def pick(t: int, device_id: str = "grabber-1", **fields) -> dict:
+    return event("pick", t, device_id, **fields)
 
 
 def start(session_id: str, t: int = T0, devices: tuple = ("grabber-1",), user_id: str = "user-1") -> dict:
@@ -157,3 +157,17 @@ def test_position_between_and_beyond_the_track():
     assert position_at(route, 15) == {"lat": 2.0, "lon": 3.0}
     assert position_at(route, 99) == {"lat": 3.0, "lon": 4.0}
     assert position_at([], 15) == {"lat": None, "lon": None}
+
+
+def test_pick_keeps_its_own_type_unless_it_cleans_a_spot():
+    # outing.json: the pick at +65 s cleans the bottle spot. The grabber's own guess loses to the glasses.
+    events = [e | {"litter_type": "can"} if e["type"] == "pick" else e for e in outing_example()]
+    events += [pick(T0 + 90_000, litter_type="paper"), pick(T0 + 100_000)]  # the bottle is gone: nothing to clean
+    log = build_sorted(events)
+    [o] = log.outings
+    assert [(p["litter_type"], p["spot_id"]) for p in o.picks] == [
+        ("bottle", SIGHTING_ID),
+        ("paper", None),
+        (None, None),
+    ]
+    assert stats([o], END)["litter"] == {"bottle": 1, "paper": 1}

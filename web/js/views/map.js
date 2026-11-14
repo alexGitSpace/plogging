@@ -84,22 +84,56 @@ export default async function render(el) {
   };
 
   // ---- Open spots ----
+  // Polled, so a spot cleaned by a grabber pick vanishes within seconds and new sightings appear.
 
-  (async () => {
-    try {
-      const open = (await api.spots()).filter((s) => !s.cleaned_at);
-      $("#open-count").textContent = open.length;
-      for (const s of open) {
-        spotMarker(s)
-          .bindPopup(`<b>${esc(LITTER[s.litter_type] || s.litter_type)}</b><br>Spotted ${esc(ago(s.spotted_at))}`)
-          .addTo(map);
+  const spotLayers = new Map(); // spot_id → marker of an open spot on the map
+
+  function vanish(marker) {
+    // The cleaned spot turns into a growing, fading ring, then goes.
+    marker.closePopup().unbindPopup();
+    let step = 0;
+    const timer = setInterval(() => {
+      step++;
+      marker.setStyle({ fillOpacity: 1 - step / 12, opacity: 1 - step / 12 }).setRadius(6 + step * 1.5);
+      if (step >= 12) {
+        clearInterval(timer);
+        marker.remove();
       }
+    }, 50);
+  }
+
+  async function refreshSpots() {
+    let spots;
+    try {
+      spots = await api.spots();
     } catch (err) {
-      $("#open-count").textContent = "–";
-      $("#idle-note").textContent = err.message;
-      $("#idle-note").hidden = false;
+      if (!spotLayers.size) {
+        $("#open-count").textContent = "–";
+        $("#idle-note").textContent = err.message;
+        $("#idle-note").hidden = false;
+      }
+      throw err; // poll() waits longer after an error
     }
-  })();
+    $("#idle-note").hidden = true;
+    const open = spots.filter((s) => !s.cleaned_at);
+    const openIds = new Set(open.map((s) => s.spot_id));
+    for (const [id, marker] of spotLayers) {
+      if (!openIds.has(id)) {
+        spotLayers.delete(id);
+        vanish(marker);
+      }
+    }
+    for (const s of open) {
+      if (spotLayers.has(s.spot_id)) continue;
+      const marker = spotMarker(s)
+        .bindPopup(`<b>${esc(LITTER[s.litter_type] || s.litter_type)}</b><br>Spotted ${esc(ago(s.spotted_at))}`)
+        .addTo(map);
+      spotLayers.set(s.spot_id, marker);
+    }
+    $("#open-count").textContent = open.length;
+    return true;
+  }
+  const stopSpots = poll(refreshSpots, 2000);
 
   // ---- Recording ----
 
@@ -229,6 +263,7 @@ export default async function render(el) {
     clearInterval(ticker);
     clearTimeout(finishArmed);
     stopPicks();
+    stopSpots();
     if (watchId !== null) navigator.geolocation.clearWatch(watchId);
     map.remove();
   };

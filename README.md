@@ -4,7 +4,7 @@
 
 Built at [Junction 2026](https://2026.hackjunction.com), 13–15 November 2026, Espoo.
 
-Strava for [plogging](https://en.wikipedia.org/wiki/Plogging), that is, picking up litter while you walk or run. Scouts wear Meta glasses that spot litter and pin it on the map; ploggers pick it up and clear it from the map. Any device can report a pick; ours is a sensor on a litter grabber that counts every item. The phone records the route, and every outing turns into stats you can share and compete on.
+Strava for [plogging](https://en.wikipedia.org/wiki/Plogging), that is, picking up litter while you walk or run. Scouts wear Meta glasses that spot litter and pin it on the map; ploggers pick it up and clear it from the map. Any device can report a pick; ours is a sensor on a litter grabber that counts every item. Both the glasses and the grabber tell the type of litter with a camera. The phone records the route, and every outing turns into stats you can share and compete on.
 
 ## How it works
 

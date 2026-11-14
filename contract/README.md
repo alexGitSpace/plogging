@@ -65,8 +65,8 @@ How the API puts events together:
 
 - An outing takes the picks of the grabbers and the sightings of the glasses in its `device_ids`, from `session.start` to `session.end`, give or take a minute for device clocks. Without `session.end` the outing is over 30 minutes after its last track point; until then `live` is true.
 - A pick sits on the route at its `t`, between the track points around it.
-- A sighting makes a spot, unless an open spot with the same `litter_type` lies within 10 m: that is the same litter seen again.
-- A pick within 30 m of an open spot cleans the nearest one. The spot gets `cleaned_at` and `cleaned_by`, and the pick gets the spot's `litter_type` and `spot_id`: the glasses' type wins over the grabber's. Other picks keep the `litter_type` the grabber sent, or `null`.
+- A sighting makes a spot, unless an open spot with the same `litter_type` lies within 10 m: that is the same litter seen again. Nor does it for a minute after a pick of the same outing cleaned a spot of that type within 10 m: the glasses see that litter in the grabber or the bag.
+- A pick cleans one open spot. First one that the glasses of its outing saw in the last 2 minutes, up to 100 m from it by GPS: of the `litter_type` the grabber sent, if any, then the nearest, or the one seen last while the pick has no position yet. Otherwise the nearest open spot within 30 m, such as one a scout pinned. The spot gets `cleaned_at` and `cleaned_by`, and the pick gets the spot's `litter_type` and `spot_id`: the glasses' type wins over the grabber's. Other picks keep the `litter_type` the grabber sent, or `null`.
 - `stats` has `duration_s`, `distance_m` (without inaccurate points and GPS jitter), `picks`, `spots_cleaned`, `spots_pinned` and `litter`: the picks with a `litter_type`, by type.
 - The leaderboard shows `user_id` as it is, so use a nickname.
 - Points, quests, streaks and "you are #5" are up to the app.

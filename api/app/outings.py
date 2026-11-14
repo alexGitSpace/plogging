@@ -14,7 +14,10 @@ STEP_M = 10  # Distance grows only after moving this far from the last counted p
 GRACE_MS = 60_000  # Device clocks differ a little: an event this close to an outing's start or end still belongs to it
 IDLE_END_MS = 30 * 60_000  # An outing without session.end is over this long after its last track point
 SPOT_MERGE_M = 10  # A sighting this close to an open spot of the same type is the same litter seen again
-CLEAN_RADIUS_M = 30  # A pick this close to an open spot cleans it: phone and glasses GPS are both metres off
+RECENT_MS = 2 * 60_000  # A pick cleans what the glasses of its outing saw this recently...
+RECENT_RADIUS_M = 100  # ...this close by GPS: the phone of the outing and the phone of the glasses differ by tens of m
+CLEAN_RADIUS_M = 30  # Otherwise a pick this close to an open spot cleans it: phone and glasses GPS are both metres off
+HELD_MS = 60_000  # After a pick, the outing's glasses may see that litter in the grabber or the bag for this long
 SKEW_MS = 10_000  # A pick may carry a time slightly before the sighting of the same litter
 EARTH_RADIUS_M = 6_371_000
 
@@ -170,13 +173,22 @@ def _owner(outings, e: dict) -> Outing | None:
 
 
 def _spots(timeline: list[tuple]) -> list[dict]:
-    """Spots are litter the glasses saw. A pick cleans the nearest open spot around it and takes its litter type:
-    the glasses see better than the grabber's camera. A pick that cleans nothing keeps the type the grabber sent."""
+    """Spots are litter the glasses saw. A pick cleans one (see _cleaned_by) and takes its litter type: the glasses
+    see better than the grabber's camera. A pick that cleans nothing keeps the type the grabber sent."""
     spots: list[dict] = []
     open_spots: list[dict] = []
+    seen: dict[str, dict[str, int]] = {}  # spot_id: {session_id: t of the latest sighting of it on that outing}
+    held: list[tuple[dict, str]] = []  # Spots cleaned in the last HELD_MS, with the session_id of the pick
     for _, kind, e, o in timeline:
         if kind == "sighting":
-            if any(s["litter_type"] == e["litter_type"] and distance_m(s, e) <= SPOT_MERGE_M for s in open_spots):
+            held = [(s, sid) for s, sid in held if e["t"] - s["cleaned_at"] <= HELD_MS]
+            if o and any(sid == o.session_id and _same_litter(s, e) for s, sid in held):
+                continue  # The litter its grabber has just picked, seen again in the grabber or the bag
+            same = [s for s in open_spots if _same_litter(s, e)]
+            if same:
+                if o:
+                    for s in same:
+                        seen.setdefault(s["spot_id"], {})[o.session_id] = e["t"]
                 continue
             spot = {
                 "spot_id": e["event_id"],
@@ -191,12 +203,41 @@ def _spots(timeline: list[tuple]) -> list[dict]:
             spots.append(spot)
             open_spots.append(spot)
             if o:
+                seen[spot["spot_id"]] = {o.session_id: e["t"]}
                 o.pinned.append(spot)
-        elif e["lat"] is not None:
-            near = [(d, s) for s in open_spots if (d := distance_m(s, e)) <= CLEAN_RADIUS_M]
-            if near:
-                _, spot = min(near, key=lambda n: n[0])
-                open_spots.remove(spot)
-                spot["cleaned_at"], spot["cleaned_by"] = e["t"], o.user_id
-                e["litter_type"], e["spot_id"] = spot["litter_type"], spot["spot_id"]
+        elif spot := _cleaned_by(e, o, open_spots, seen):
+            open_spots.remove(spot)
+            held.append((spot, o.session_id))
+            spot["cleaned_at"], spot["cleaned_by"] = e["t"], o.user_id
+            e["litter_type"], e["spot_id"] = spot["litter_type"], spot["spot_id"]
     return spots
+
+
+def _same_litter(spot: dict, sighting: dict) -> bool:
+    """A sighting this close to a spot of its type is the same litter seen again. Not further: litter of one type
+    often lies close together, such as cigarette butts."""
+    return spot["litter_type"] == sighting["litter_type"] and distance_m(spot, sighting) <= SPOT_MERGE_M
+
+
+def _cleaned_by(pick: dict, o: Outing, open_spots: list[dict], seen: dict) -> dict | None:
+    """The open spot a pick cleans. First one that the glasses of its outing saw in the last RECENT_MS, up to
+    RECENT_RADIUS_M away by GPS: of the type the grabber sent, if any, then the nearest, or the latest seen while the
+    pick has no position. Else the nearest open spot within CLEAN_RADIUS_M, such as one a scout pinned."""
+
+    def seen_at(s: dict) -> int | None:
+        return seen.get(s["spot_id"], {}).get(o.session_id)
+
+    recent = [s for s in open_spots if (t := seen_at(s)) is not None and pick["t"] - t <= RECENT_MS]
+    if pick["lat"] is not None:
+        recent = [s for s in recent if distance_m(s, pick) <= RECENT_RADIUS_M]
+    if recent:
+
+        def rank(s: dict) -> tuple:
+            other_type = pick["litter_type"] is not None and s["litter_type"] != pick["litter_type"]
+            return other_type, distance_m(s, pick) if pick["lat"] is not None else -seen_at(s)
+
+        return min(recent, key=rank)
+    if pick["lat"] is None:
+        return None
+    near = [(d, s) for s in open_spots if (d := distance_m(s, pick)) <= CLEAN_RADIUS_M]
+    return min(near, key=lambda n: n[0])[1] if near else None

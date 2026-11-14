@@ -134,7 +134,7 @@ def read_router(store: Store) -> APIRouter:
 
     @router.get("/api/spots")
     def get_spots() -> SpotList:
-        """Litter the glasses saw, newest first. A spot stays open until a pick within 30 m cleans it."""
+        """Litter the glasses saw, newest first. A spot stays open until a grabber pick cleans it: see the contract."""
         return SpotList(spots=current().spots)
 
     @router.get("/api/leaderboard")

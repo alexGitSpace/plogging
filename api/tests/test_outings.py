@@ -2,12 +2,14 @@ import json
 import uuid
 from pathlib import Path
 
-from app.outings import IDLE_END_MS, STEP_M, build, position_at, stats
+from app.outings import HELD_MS, IDLE_END_MS, RECENT_MS, STEP_M, build, position_at, stats
 
 EXAMPLES = Path(__file__).resolve().parents[2] / "contract" / "examples"
 T0 = 1794654000000  # session.start in outing.json
 END = T0 + 120_000  # session.end in outing.json
 SIGHTING_ID = "6bad6be2-8e7a-46e9-9f19-950499dd251d"  # the bottle in outing.json
+KIT = ("grabber-1", "glasses-1")  # A plogger with a grabber and glasses
+HOUR = 60 * 60_000
 
 
 def outing_example() -> list[dict]:
@@ -171,3 +173,149 @@ def test_pick_keeps_its_own_type_unless_it_cleans_a_spot():
         (None, None),
     ]
     assert stats([o], END)["litter"] == {"bottle": 1, "paper": 1}
+
+
+def kit_outing(*events: dict, until: int = T0 + 600_000) -> list[dict]:
+    """An outing with a grabber and glasses that stands at 60.18, 24.83 from T0 to until."""
+    return [start("s1", devices=KIT), track("s1", (T0, 60.18, 24.83), (until, 60.18, 24.83)), *events]
+
+
+def test_pick_cleans_what_its_glasses_just_saw_however_far_gps_puts_it():
+    # The phone that records the outing and the phone of the glasses may disagree by tens of metres indoors.
+    # An old can lies 10 m from the pick, but the glasses saw a bottle 30 s before it, 60 m away by GPS.
+    log = build_sorted(
+        [sighting(T0 - HOUR, 60.18009, 24.83, device_id="glasses-2")]
+        + kit_outing(sighting(T0 + 30_000, 60.18054, 24.83, litter_type="bottle"), pick(T0 + 60_000))
+    )
+    bottle, can = log.spots
+    assert (bottle["litter_type"], bottle["cleaned_at"], can["cleaned_at"]) == ("bottle", T0 + 60_000, None)
+
+
+def test_pick_takes_the_type_the_grabber_sent_then_the_nearest():
+    log = build_sorted(
+        kit_outing(
+            sighting(T0 + 10_000, 60.18005, 24.83),  # a can 6 m away
+            sighting(T0 + 11_000, 60.18018, 24.83, litter_type="bottle"),  # a bottle 20 m away
+            sighting(T0 + 12_000, 60.18023, 24.83, litter_type="paper"),  # paper 26 m away
+            pick(T0 + 30_000, litter_type="bottle"),
+            pick(T0 + 40_000),
+        )
+    )
+    [o] = log.outings
+    assert [p["litter_type"] for p in o.picks] == ["bottle", "can"]
+    assert [s["litter_type"] for s in log.spots if s["cleaned_at"] is None] == ["paper"]
+
+
+def test_pick_before_any_track_cleans_the_latest_thing_its_glasses_saw():
+    log = build_sorted(
+        [
+            start("s1", devices=KIT),
+            sighting(T0 + 10_000, 60.18, 24.83),
+            sighting(T0 + 20_000, 60.181, 24.83, litter_type="bottle"),
+            pick(T0 + 30_000),
+            pick(T0 + 40_000),
+        ]
+    )
+    [o] = log.outings
+    assert [(p["lat"], p["litter_type"]) for p in o.picks] == [(None, "bottle"), (None, "can")]
+
+
+def test_from_afar_only_what_its_own_glasses_saw_lately_counts():
+    later = T0 + 10_000 + RECENT_MS + 10_000
+    log = build_sorted(
+        kit_outing(
+            sighting(T0 + 10_000, 60.18054, 24.83),  # 60 m away, seen by its glasses too long before the pick
+            sighting(later - 5_000, 60.18054, 24.8302, litter_type="bottle", device_id="glasses-2"),  # other glasses
+            pick(later),
+        )
+    )
+    assert [s["cleaned_at"] for s in log.spots] == [None, None]
+
+
+def test_litter_seen_again_counts_as_seen_now():
+    # A scout pinned a can an hour ago. The plogger's glasses see it again, and GPS puts the pick 60 m away.
+    log = build_sorted(
+        [sighting(T0 - HOUR, 60.18054, 24.83, device_id="glasses-2")]
+        + kit_outing(sighting(T0 + 30_000, 60.18057, 24.83), pick(T0 + 60_000))  # 3 m from the pin: the same can
+    )
+    [spot] = log.spots
+    assert spot["cleaned_at"] == T0 + 60_000
+
+
+def test_litter_in_the_grabber_is_not_pinned_again():
+    soon, later = T0 + 20_000 + HELD_MS // 2, T0 + 20_000 + HELD_MS + 10_000
+    log = build_sorted(
+        kit_outing(
+            sighting(T0 + 10_000, 60.18, 24.83),
+            pick(T0 + 20_000),
+            sighting(T0 + 25_000, 60.18002, 24.83),  # seen as it was picked: still the same can
+            sighting(soon, 60.18005, 24.83),  # the can in the grabber, 6 m off by GPS
+            sighting(soon, 60.18005, 24.83, litter_type="bottle"),  # a bottle there is new litter
+            sighting(soon + 1_000, 60.18008, 24.83, device_id="glasses-2"),  # someone else's glasses: a new can
+            sighting(later, 60.17992, 24.83),  # long after the pick: another can, 9 m south of the picked one
+        )
+    )
+    assert [(s["litter_type"], s["spotted_at"], s["cleaned_at"]) for s in log.spots] == [
+        ("can", later, None),
+        ("can", soon + 1_000, None),
+        ("bottle", soon, None),
+        ("can", T0 + 10_000, T0 + 20_000),
+    ]
+
+
+def test_what_its_glasses_saw_far_away_is_not_taken_for_the_pick():
+    # The glasses saw a bottle 150 m away and it was left. The pick lands 3 m from a can a scout pinned.
+    log = build_sorted(
+        [sighting(T0 - HOUR, 60.18003, 24.83, device_id="glasses-2")]
+        + kit_outing(sighting(T0 + 30_000, 60.18135, 24.83, litter_type="bottle"), pick(T0 + 90_000))
+    )
+    bottle, can = log.spots
+    assert (bottle["cleaned_at"], can["cleaned_at"]) == (None, T0 + 90_000)
+
+
+def test_what_the_glasses_saw_on_an_earlier_outing_does_not_count():
+    # A demo stand: user-1 finishes, user-2 starts with the same grabber and glasses and picks something else.
+    log = build_sorted(
+        [
+            start("s1", devices=KIT),
+            track("s1", (T0, 60.18, 24.83), (T0 + 60_000, 60.18, 24.83)),
+            sighting(T0 + 30_000, 60.18054, 24.83),  # user-1's glasses, 60 m off by GPS
+            event("session.end", T0 + 60_000, session_id="s1"),
+            start("s2", t=T0 + 90_000, devices=KIT, user_id="user-2"),
+            track("s2", (T0 + 90_000, 60.18, 24.83), (T0 + 120_000, 60.18, 24.83)),
+            pick(T0 + 120_000),
+        ]
+    )
+    [spot] = log.spots
+    assert spot["cleaned_at"] is None
+
+
+def test_another_kit_seeing_the_same_can_keeps_this_outings_claim():
+    # Two ploggers walk together with their own kits, and both glasses see the can. The first one picks it.
+    log = build_sorted(
+        kit_outing(sighting(T0 + 10_000, 60.18054, 24.83))  # 60 m off by GPS
+        + [
+            start("s2", devices=("grabber-2", "glasses-2"), user_id="user-2"),
+            sighting(T0 + 20_000, 60.18056, 24.83, device_id="glasses-2"),
+            pick(T0 + 40_000),
+        ]
+    )
+    [spot] = log.spots
+    assert (spot["cleaned_at"], spot["cleaned_by"]) == (T0 + 40_000, "user-1")
+
+
+def test_litter_in_the_grabber_does_not_keep_litter_next_to_it_fresh():
+    # Two butts 15 m apart, 60 m off by GPS. The first is picked; the glasses then see it in the grabber, 7 m from the
+    # second. That is not a new look at the second one, so a pick two minutes later does not take it from afar.
+    butt = "cigarette_butt"
+    log = build_sorted(
+        kit_outing(
+            sighting(T0 + 10_000, 60.18054, 24.83, litter_type=butt),
+            sighting(T0 + 10_000, 60.180675, 24.83, litter_type=butt),
+            pick(T0 + 20_000),
+            sighting(T0 + 70_000, 60.180612, 24.83, litter_type=butt),
+            pick(T0 + 140_000),
+        )
+    )
+    first, second = sorted(log.spots, key=lambda s: s["lat"])
+    assert (first["cleaned_at"], second["cleaned_at"]) == (T0 + 20_000, None)

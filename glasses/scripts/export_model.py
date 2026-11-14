@@ -1,7 +1,7 @@
 """Exports a YOLO model for the apps.
 
     python scripts/export_model.py                  # the pre-trained yolo11n (80 COCO classes)
-    python scripts/export_model.py path/to/best.pt  # your own trained weights
+    python scripts/export_model.py path/to/best.pt  # TACO or your own trained weights
     python scripts/export_model.py best.pt --only android
 
 The results always go to the same two files, so the apps need no change when the

@@ -363,8 +363,9 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             small.recycle()
           }
       val now = System.currentTimeMillis()
-      if (hands.isNotEmpty()) {
-        latestHands = hands
+      val wearer = hands.filter { it.belongsToWearer() }
+      if (wearer.isNotEmpty()) {
+        latestHands = wearer
         lastHandMs = now
       }
       val shown = if (now - lastHandMs <= PickDetector.HAND_GAP_MS) latestHands else emptyList()

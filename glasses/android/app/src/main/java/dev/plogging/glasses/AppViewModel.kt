@@ -97,6 +97,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
   private var glassesReady = false
   private var detector: ObjectDetector? = null
   private var pickDetector = PickDetector()
+  private var recogniseGate = RecogniseGate()
   private var handTracker: HandTracker? = null
   private val voice = CalmVoice(application) { line -> _uiState.update { it.copy(voiceLine = line) } }
   private var run: Job? = null
@@ -133,6 +134,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
   private val handReady = Channel<Unit>(Channel.CONFLATED)
   @Volatile private var latestHands: List<HandPose> = emptyList()
   @Volatile private var latestDetections: List<Detection> = emptyList()
+  @Volatile private var latestAllDetections: List<Detection> = emptyList()
+  private val frameSlot = AtomicReference<Bitmap?>(null)
   private var lastHandMs = 0L
 
   // MARK: Actions
@@ -177,10 +180,13 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     if (_uiState.value.isRunning) return
     val kind = _uiState.value.sourceKind
     pickDetector = PickDetector()
+    recogniseGate = RecogniseGate()
     spotter = Spotter()
     latestHands = emptyList()
     latestDetections = emptyList()
+    latestAllDetections = emptyList()
     handSlot.getAndSet(null)?.recycle()
+    frameSlot.getAndSet(null)?.recycle()
     _uiState.update {
       it.copy(
           isRunning = true,
@@ -259,6 +265,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
           voice.end()
         }
         handSlot.getAndSet(null)?.recycle()
+        frameSlot.getAndSet(null)?.recycle()
         val saved =
             if (recordArmed) {
               recordArmed = false
@@ -343,22 +350,25 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
   /** Runs on a background thread, one frame at a time. The hand skeleton is updated elsewhere. */
   private fun detect(frame: Bitmap, detector: ObjectDetector) {
     val startedAt = System.nanoTime()
-    val detections = detector.detect(frame).filter { it.countsAsLitter() }
-    showOnGlasses(frame, detections)
+    val detections = detector.detect(frame)
+    val live = detections.filter { it.isLiveLitter() }
+    showOnGlasses(frame, live)
     val now = System.nanoTime()
 
     resultTimes.addLast(now)
     while (now - resultTimes.first() > 1_000_000_000L) resultTimes.removeFirst()
 
-    latestDetections = detections
+    rememberFrame(frame)
+    latestAllDetections = detections
+    latestDetections = live
     val seenAt = System.currentTimeMillis()
-    reporter.note(detections, location.fix.value, seenAt)
-    val pick = pickDetector.onFrame(detections, latestHands, seenAt)
+    reporter.note(live, location.fix.value, seenAt)
+    val pick = pickDetector.onFrame(live, latestHands, seenAt)
 
     _uiState.update {
       if (!it.isRunning) return@update it
       it.copy(
-          detections = detections,
+          detections = live,
           detectionsPerSecond = resultTimes.size,
           inferenceMilliseconds = (now - startedAt) / 1_000_000f,
           picks = if (pick != null) it.picks + 1 else it.picks,
@@ -366,6 +376,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
       )
     }
     if (pick != null) voice.onPick(pick.label)
+    maybeRecognise(pick, emptyList(), detections, seenAt, frame)
   }
 
   private suspend fun trackHands(tracker: HandTracker) {
@@ -397,6 +408,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         )
       }
       if (pick != null) voice.onPick(pick.label)
+      maybeRecognise(pick, shown, latestAllDetections, now, null)
     }
   }
 
@@ -411,6 +423,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
       )
     }
     if (pick != null) voice.onPick(pick.label)
+    maybeRecognise(pick, emptyList(), latestAllDetections, System.currentTimeMillis(), null)
   }
 
   /**
@@ -425,6 +438,66 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
       displayCard = spotted?.let { DisplayCard.of(it, frame) }
     }
     glasses.show(displayCard)
+  }
+
+  private fun rememberFrame(frame: Bitmap) {
+    if (frame.isRecycled) return
+    val copy = frame.copy(Bitmap.Config.ARGB_8888, false) ?: return
+    frameSlot.getAndSet(copy)?.recycle()
+  }
+
+  private fun maybeRecognise(
+      pick: Pick?,
+      hands: List<HandPose>,
+      detections: List<Detection>,
+      now: Long,
+      frame: Bitmap?,
+  ) {
+    val gate = recogniseGate
+    val crop = gate.consider(pick, hands, detections, now) ?: return
+    if (pick == null) {
+      val counted = Pick("other", now, 0f, crop.box)
+      _uiState.update {
+        if (!it.isRunning) return@update it
+        it.copy(picks = it.picks + 1, lastPick = counted)
+      }
+      voice.onPick(counted.label)
+    }
+    val source = frame?.takeUnless { it.isRecycled } ?: frameSlot.get()?.takeUnless { it.isRecycled }
+    val snapshot = source?.copy(Bitmap.Config.ARGB_8888, false)
+    if (snapshot == null) {
+      gate.finish(now)
+      return
+    }
+    viewModelScope.launch(Dispatchers.IO) {
+      try {
+        val jpeg = RecogniseClient.cropJpeg(snapshot, crop.box)
+        val result = RecogniseClient.post(reporter.apiUrl, jpeg, crop.hint, crop.hintConfidence)
+        if (result == null || result.confidence < RecogniseClient.MIN_CONFIDENCE) return@launch
+        val labelled =
+            Detection(
+                result.litterType,
+                result.confidence,
+                crop.box.left,
+                crop.box.top,
+                crop.box.right,
+                crop.box.bottom,
+            )
+        reporter.note(listOf(labelled), location.fix.value, System.currentTimeMillis())
+        val card = DisplayCard.of(Spot(labelled, DisplayCard.Sign.AHEAD, 1), snapshot)
+        displayCard = card
+        glasses.show(card)
+        val named = Pick(result.litterType, pick?.t ?: now, result.confidence, labelled)
+        _uiState.update {
+          if (!it.isRunning) return@update it
+          it.copy(lastPick = named)
+        }
+        voice.onPick(result.litterType)
+      } finally {
+        snapshot.recycle()
+        gate.finish(System.currentTimeMillis())
+      }
+    }
   }
 
   private suspend fun loadHands(): HandTracker =
@@ -448,6 +521,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     detector?.close()
     handTracker?.close()
     handTracker = null
+    frameSlot.getAndSet(null)?.recycle()
     voice.end()
   }
 }

@@ -14,6 +14,16 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from app.events import parse_event
 from app.read import read_router
+from app.recognise import (
+    ClassifyFn,
+    GeminiError,
+    ImageError,
+    MissingKeyError,
+    RecogniseRequest,
+    RecogniseResult,
+    decode_jpeg,
+    gemini_classify,
+)
 from app.store import Store
 
 MAX_BATCH = 100
@@ -71,8 +81,9 @@ class EventList(BaseModel):
     events: list[dict[str, Any]]
 
 
-def create_app(db_path: str) -> FastAPI:
+def create_app(db_path: str, classify: ClassifyFn | None = None) -> FastAPI:
     store = Store(db_path)
+    run_classify = classify if classify is not None else gemini_classify
     app = FastAPI(title="plogging API", summary="Events format: contract/README.md in the repository")
     # Added before CORS so that CORS wraps it and browsers can read the 413.
     app.add_middleware(BodySizeLimit, max_bytes=MAX_BODY_BYTES)
@@ -99,6 +110,19 @@ def create_app(db_path: str) -> FastAPI:
         return EventList(events=store.latest(limit))
 
     app.include_router(read_router(store))
+
+    @app.post("/api/recognise")
+    def post_recognise(body: RecogniseRequest) -> RecogniseResult:
+        try:
+            image = decode_jpeg(body.image_jpeg_base64)
+        except ImageError as e:
+            raise HTTPException(status_code=422, detail=str(e)) from e
+        try:
+            return run_classify(image, body.hint, body.hint_confidence)
+        except MissingKeyError as e:
+            raise HTTPException(status_code=503, detail=str(e)) from e
+        except GeminiError as e:
+            raise HTTPException(status_code=502, detail=str(e)) from e
 
     @app.get("/", response_class=HTMLResponse, include_in_schema=False)
     def page() -> str:

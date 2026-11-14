@@ -20,6 +20,8 @@ Or in Docker: `docker build -t plokka-api . && docker run -p 8000:8000 -v plokka
 |---|---|---|
 | `DATABASE_PATH` | `data/events.db` (`/data/events.db` in Docker) | SQLite file with the events |
 | `PORT` | `8000` | Port in Docker; hosts usually set it |
+| `GEMINI_API_KEY` | unset | Key for `POST /api/recognise`. Without it that route returns `503` |
+| `GEMINI_MODEL` | `gemini-3.5-flash-lite` | Gemini model for a crop |
 
 ## Deploy
 
@@ -40,6 +42,7 @@ Every deploy stops the API for a few seconds: Railway never runs two copies of a
 |---|---|
 | `POST /api/events` | Events as in the contract. Each event is checked on its own: a bad one goes to `rejected` with the reason, the others are stored |
 | `GET /api/events?limit=20` | The latest events by arrival, newest first: `{"events": [...]}`, each event as in the contract. `limit` is 1 to 1000 |
+| `POST /api/recognise` | One JPEG crop. Returns a `litter_type` and `confidence` from Gemini. The image is not stored |
 | `GET /api/spots` | Litter spots, open and cleaned |
 | `GET /api/outings` | Outings with stats; filters `user_id`, `since`, `limit` |
 | `GET /api/outings/{session_id}` | One outing with its route, picks and pinned spots |

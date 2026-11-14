@@ -17,6 +17,7 @@ class PickDetectorTest {
     val picks = clock.bend(detector, 18)
     assertEquals(1, picks.size)
     assertEquals("Bottle", picks[0].label)
+    assertEquals(0.9f, picks[0].confidence)
   }
 
   @Test

@@ -33,7 +33,7 @@ docker build -t plogging-web web && docker run -p 8080:8080 -e API_URL=https://â
 |---|---|
 | `index.html` | The shell: sidebar, the view, and the import map for `three` and `three/addons/` |
 | `css/app.css` | Colours and shapes from the mockup as variables on `:root`, plus shared classes: `card`, `big`, `eyebrow`, `pill`, `btn`, `avatar`, `grid-2`, `grid-3` |
-| `js/main.js` | Sidebar and router on `#/feed`, `#/quests`, `#/map`, `#/leaders`, `#/profile`, `#/outing/<session_id>`, `#/done/<session_id>` |
+| `js/main.js` | Sidebar and router on `#/feed`, `#/quests`, `#/map`, `#/leaders`, `#/profile`, `#/done/<session_id>` |
 | `js/api.js` | One function per API request, `poll()` for live screens, `weekStart()` for "this week", and the two settings |
 | `js/recorder.js` | Records an outing in this browser and sends it as events: the phone's part of the contract |
 | `js/map.js` | A Leaflet map in the light style of the mockup |
@@ -47,7 +47,7 @@ docker build -t plogging-web web && docker run -p 8080:8080 -e API_URL=https://â
 
 ## Conventions
 
-- **A screen** is a module in `js/views/` with `export default async function render(el, param)`. It fills `el`, and returns a function that cleans up: stops polling, removes the map. To add one, add it to `VIEWS` in `main.js` (and to `TABS` for a sidebar entry). A full-screen map screen also goes into the `.view-map, .view-outing` rule in `app.css`.
+- **A screen** is a module in `js/views/` with `export default async function render(el, param)`. It fills `el`, and returns a function that cleans up: stops polling, removes the map. To add one, add it to `VIEWS` in `main.js` (and to `TABS` for a sidebar entry). A full-screen map screen also goes into the `.view-map` rules in `app.css`.
 - **Each screen gets a fresh `el`.** If the user leaves while a screen is still loading, its late writes land in a detached element, so screens need no "am I still open?" checks.
 - **Everything from the API goes through `esc()`** before it reaches `innerHTML`: `user_id` is whatever a device sent.
 - **Live data is polled**, as the contract says: `poll(fn, 1500)` waits for each response, backs off after errors, and stops when `fn` returns `false` or when you call the function it returns.
@@ -61,7 +61,6 @@ From the mockup, and where each takes its data. Feed, Quests, Leaderboard and Pr
 | Screen | In the mockup | Data |
 |---|---|---|
 | Map `#/map` | Spots as dots and clusters with a count; Plogger / Scout switch; "Litter nearby: 27 spots to clean"; start button. While recording: time, points, distance, Pause / Finish | `api.spots()`; pollution zones (below); `recorder.js` and `api.outing(id)` for points |
-| Live outing `#/outing/<id>` | Time, distance, picked; the route; nearest spot; "Just picked Â· +10 pts"; daily quest progress; Pause / Finish | `api.outing(id)` polled, `api.spots()`. Done: stats, route, picks |
 | Summary `#/done/<id>` | The character; "Challenge complete"; points and streak; spots, distance, time; "You're now #3 in Espoo Â· +2" | `api.outing(id)`, `api.leaderboard()` |
 | Feed `#/feed` | This week (time, items, km); the "Clean Otaniemi" challenge; friends' outings with a mini map | `api.outings({ user_id, since: weekStart() })`; `api.outings({ limit })`, `api.outing(id)` for the route |
 | Quests `#/quests` | Day streak; daily quests with progress and points; weekly quest | `api.outings({ user_id })` |
@@ -84,18 +83,6 @@ What the API does not have, and how the mockup's parts map onto it:
 - Events wait in the browser until the API accepts them, so a lost connection loses nothing, and a reload carries the outing on. Recording goes on on other tabs of the app; Map shows a red dot meanwhile.
 - Pause is the app's own: the timer stops and no track is recorded. The contract has no pause event, so the API's `duration_s` still counts the pause.
 - The location needs HTTPS or localhost. Phones stop reporting it when the screen locks, so the page asks to keep the screen on.
-
-### Live outing: `#/outing/live`
-
-For watching an outing recorded on another device, for example on the laptop during the demo. While the selected user has a live outing that this browser is not recording, the map shows **Live outing**, which leads to `#/outing/live`.
-
-`#/outing/live` opens the live outing of the selected user by itself (the first with `live: true` in `api.outings({ user_id, limit: 5 })`), so nobody copies a `session_id` from the phone:
-
-- With no live outing yet, it says so and keeps looking: open it on the laptop before the walk starts, and the outing appears by itself.
-- When the outing ends, it goes to the summary, `#/done/<id>`.
-- `#/outing/<id>` still shows one outing by its id and stays on it when it ends.
-
-To try it without a phone: record with `?fake` in another browser, or run `python3 api/sim.py live --user <nickname>`, which prints the outing's id when it starts.
 
 ### Pollution zones
 

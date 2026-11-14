@@ -20,7 +20,6 @@ const VIEWS = {
   map: () => import("./views/map.js"),
   leaders: () => import("./views/leaders.js"),
   profile: () => import("./views/profile.js"),
-  outing: () => import("./views/outing.js"),
   done: () => import("./views/done.js"),
 };
 
@@ -36,7 +35,7 @@ recorder.subscribe(() => navEl.querySelector('[data-tab="map"]').classList.toggl
 async function route() {
   const [name, param] = location.hash.replace(/^#\/?/, "").split("/");
   const view = VIEWS[name] ? name : "map";
-  const tab = view === "outing" || view === "done" ? "map" : view;
+  const tab = view === "done" ? "map" : view;
   for (const a of navEl.querySelectorAll("a")) a.classList.toggle("active", a.dataset.tab === tab);
 
   const id = ++routeId;

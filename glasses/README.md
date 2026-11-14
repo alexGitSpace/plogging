@@ -62,7 +62,13 @@ cd glasses/android && ./gradlew installDebug
 
 If Gradle cannot find the Android SDK, put its path into `glasses/android/local.properties` as `sdk.dir=/path/to/Android/sdk`.
 
-On real glasses, the steps are the same as on iOS: turn on **Developer Mode** in Meta AI, run the app on the phone, allow **Nearby devices** when Android asks, choose **Meta glasses**, tap **Connect glasses**, then **Start**.
+On real glasses, the steps are the same as on iOS: turn on **Developer Mode** in Meta AI, run the app on the phone, allow **Nearby devices** when Android asks, choose **Meta glasses**, then tap **Connect glasses** and confirm in Meta AI. The live view starts when the app returns registered.
+
+The Android app defaults to Meta glasses and starts the live view automatically once the app is registered. First-time registration and camera permission still require confirmation in Meta AI.
+
+## AI tooling
+
+OpenAI Codex assisted with the Android full-screen viewfinder, orientation-aware HUD, and Meta glasses startup flow.
 
 Give the emulator several CPU cores, or detection crawls: start it with `emulator -avd <name> -cores 4`.
 

@@ -39,7 +39,7 @@ enum class SourceKind(val title: String, val explanation: String) {
 }
 
 data class UiState(
-    val sourceKind: SourceKind = SourceKind.MOCK_VIDEO,
+    val sourceKind: SourceKind = SourceKind.GLASSES,
     val isRunning: Boolean = false,
     val status: String = "Ready",
     val detections: List<Detection> = emptyList(),

@@ -46,6 +46,15 @@ class Store:
         finally:
             db.close()
 
+    def all(self) -> list[dict]:
+        """Every event in time order: outings and stats are computed from them on each read."""
+        db = self._connect()
+        try:
+            rows = db.execute("SELECT body FROM events ORDER BY t, seq").fetchall()
+        finally:
+            db.close()
+        return [json.loads(body) for (body,) in rows]
+
     def latest(self, limit: int) -> list[dict]:
         """The latest events by arrival, newest first."""
         db = self._connect()

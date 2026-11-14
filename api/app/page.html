@@ -65,6 +65,7 @@
       case "session.start":
         return `${e.role} ${e.user_id} · devices ${e.device_ids.join(", ") || "none"} · session ${short(e.session_id)}`;
       case "session.end": return `session ${short(e.session_id)}`;
+      case "pick": return e.litter_type || "";
       default: return "";
     }
   }

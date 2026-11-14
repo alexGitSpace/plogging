@@ -6,6 +6,7 @@ composeBom = "2026.05.01"
 lifecycle = "2.10.0"
 mwdat = "1.0.1"
 onnxruntime = "1.32.0"
+mediapipe = "1.2.3"
 junit = "4.13.2"
 
 [libraries]
@@ -19,6 +20,7 @@ mwdat-camera = { group = "com.meta.wearable", name = "mwdat-camera", version.ref
 mwdat-motion = { group = "com.meta.wearable", name = "mwdat-motion", version.ref = "mwdat" }
 mwdat-mockdevice = { group = "com.meta.wearable", name = "mwdat-mockdevice", version.ref = "mwdat" }
 onnxruntime-android = { group = "com.microsoft.onnxruntime", name = "onnxruntime-android", version.ref = "onnxruntime" }
+mediapipe-tasks-vision = { group = "com.google.mediapipe", name = "tasks-vision", version.ref = "mediapipe" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 
 [plugins]

@@ -5,6 +5,7 @@ android/app/src/main/assets/*.onnx
 android/app/src/main/assets/*.mp4
 *.pt
 *.onnx
+*.task
 
 # Swift Package Manager
 .swiftpm/

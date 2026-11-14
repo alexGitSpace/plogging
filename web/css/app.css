@@ -82,6 +82,7 @@ h1, h2, h3, p { margin: 0; }
   background: var(--green); color: #fff; font-weight: 700; flex: none;
 }
 
+.raccoon-stage { width: 240px; height: 240px; margin: 0 auto; border-radius: 50%; background: radial-gradient(circle, var(--green-soft) 0 62%, transparent 63%); overflow: visible; }
 .placeholder { border: 2px dashed var(--line); border-radius: var(--radius); padding: 40px; text-align: center; color: var(--muted); }
 
 /* Map screens */

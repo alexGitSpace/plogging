@@ -44,6 +44,19 @@ export const api = {
   leaderboard: ({ since } = {}) => get("/api/leaderboard", { since }).then((d) => d.users),
 };
 
+// The phone page that records an outing (api/README.md, "Recording an outing"), with "you" as the nickname.
+export function recordUrl() {
+  const url = new URL(API_URL + "/record");
+  if (user) url.searchParams.set("user", user);
+  return url.href;
+}
+
+// The newest outing of "you" that is still being recorded, or null.
+export async function liveOuting() {
+  const outings = await api.outings({ user_id: user, limit: 5 });
+  return outings.find((o) => o.live) || null;
+}
+
 // Calls fn now and then every `ms` until the returned stop() is called or fn returns false.
 // Waits for each call before scheduling the next, so slow responses never pile up; after an error it waits twice as long.
 // The contract asks live screens to poll every 1–2 s.

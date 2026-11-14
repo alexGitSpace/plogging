@@ -96,19 +96,6 @@ curl -I https://httpbin.org/get   # first line should end in 200
 Wrong password or network? `sudo nmcli connection delete "MY_SSID"` and
 connect again.
 
-## Setting the API URL
-
-The API URL is in the team chat, not in the repository. Store it once on
-the board, outside the app folder, which every deploy replaces:
-
-```sh
-ssh arduino@<board-ip> "echo 'API_URL=https://<the-api-host>' > /home/arduino/my-app.env"
-```
-
-`deploy.sh` copies that file into the app folder as `.env` on every deploy,
-and the app reads it at start-up. Without it the app still classifies and
-logs, but sends no pick.
-
 ## Connecting the camera
 
 The UNO Q has a single USB-C port, so a USB webcam goes through a USB-C hub

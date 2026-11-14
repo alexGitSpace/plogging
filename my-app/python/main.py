@@ -1,5 +1,4 @@
 import json
-import os
 import queue
 import threading
 import time
@@ -30,20 +29,6 @@ def _log(message: str):
     """Log with the wall-clock time so lines can be matched to presses and photo names."""
     stamp = time.strftime("%Y-%m-%d %H:%M:%S")
     print(f"{stamp} {message}", flush=True)
-
-
-def _read_api_url() -> str:
-    """Read the API URL from outside the code, as it must stay out of the public repository."""
-    url = os.environ.get("API_URL", "")
-    env_file = _APP_DIR / ".env"  # git-ignored, deployed to the board with the app folder
-    if not url and env_file.exists():
-        for line in env_file.read_text().splitlines():
-            if line.startswith("API_URL="):
-                url = line.removeprefix("API_URL=").strip()
-    return url.rstrip("/")
-
-
-_API_URL = _read_api_url()
 
 
 def _post_pick(t_ms: int, timeout: float) -> str:
@@ -137,9 +122,6 @@ def _report_next_long_press():
     if top is None or float(top["confidence"]) < _PICK_CONFIDENCE:
         _log(f"long press {count}: no pick sent, nothing above {_PICK_CONFIDENCE} %")
         return
-    if not _API_URL:
-        _log(f"long press {count}: pick of {top['class_name']} NOT SENT, API_URL is not set")
-        return
     remaining = deadline - time.monotonic()
     if remaining <= 0:
         _log(f"long press {count}: pick DROPPED, the {_DEADLINE_S} s were used up")
@@ -150,5 +132,5 @@ def _report_next_long_press():
 Bridge.provide("long_press", _queue_long_press)
 
 _camera.start()
-_log(f"Hello from Linux! Waiting for long presses. Picks go to {_API_URL or 'nowhere: API_URL is not set'}.")
+_log(f"Hello from Linux! Waiting for long presses. Picks go to {_API_URL}.")
 App.run(user_loop=_report_next_long_press)

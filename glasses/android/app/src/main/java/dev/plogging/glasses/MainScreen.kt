@@ -91,7 +91,13 @@ fun MainScreen(
     val landscape = maxWidth > maxHeight
 
     if (frame != null) {
-      FrameView(frame!!, state.detections, fitInside = landscape, modifier = Modifier.fillMaxSize())
+      FrameView(
+          frame!!,
+          state.detections,
+          state.hands,
+          fitInside = landscape,
+          modifier = Modifier.fillMaxSize(),
+      )
     } else {
       EmptyViewfinder(state.isRunning, state.needsRegistration)
     }
@@ -529,6 +535,7 @@ private fun SourceOption(kind: SourceKind, selected: Boolean, enabled: Boolean, 
 private fun FrameView(
     frame: Bitmap,
     detections: List<Detection>,
+    hands: List<HandPose>,
     fitInside: Boolean,
     modifier: Modifier = Modifier,
 ) {
@@ -569,8 +576,29 @@ private fun FrameView(
         drawText(label, topLeft = Offset(tagLeft + padding, tagTop + 1f))
       }
     }
+
+    fun at(x: Float, y: Float) = Offset(cropX + x * drawnWidth, cropY + y * drawnHeight)
+    for (hand in hands) {
+      if (hand.points.size < 21) continue
+      for ((start, end) in HAND_EDGES) {
+        drawLine(Color.White, at(hand.points[start].x, hand.points[start].y), at(hand.points[end].x, hand.points[end].y), 2.dp.toPx())
+      }
+      for (point in hand.points) {
+        drawCircle(Leaf, 3.dp.toPx(), at(point.x, point.y))
+      }
+    }
   }
 }
+
+private val HAND_EDGES =
+    listOf(
+        0 to 1, 1 to 2, 2 to 3, 3 to 4,
+        0 to 5, 5 to 6, 6 to 7, 7 to 8,
+        0 to 9, 9 to 10, 10 to 11, 11 to 12,
+        0 to 13, 13 to 14, 14 to 15, 15 to 16,
+        0 to 17, 17 to 18, 18 to 19, 19 to 20,
+        5 to 9, 9 to 13, 13 to 17,
+    )
 
 /** The same colour for the same class on every frame. */
 private fun colorFor(label: String): Color {
@@ -586,11 +614,10 @@ private fun reportLine(state: UiState): String {
 }
 
 private fun motionLine(state: UiState): String {
-  val stats = "${state.detectionsPerSecond} fps  ·  ${state.inferenceMilliseconds.roundToInt()} ms"
+  val parts = mutableListOf("${state.detectionsPerSecond} fps  ·  ${state.inferenceMilliseconds.roundToInt()} ms")
   val tilt = state.tiltDegrees
-  return when {
-    tilt != null -> "$stats  ·  tilt ${tilt.roundToInt()}°"
-    state.isRunning -> "$stats  ·  pick detection off"
-    else -> stats
-  }
+  if (tilt != null) parts += "tilt ${tilt.roundToInt()}°"
+  else if (state.isRunning) parts += "pick detection off"
+  parts += if (state.handTracking) "hands ${state.hands.size}" else "hands off"
+  return parts.joinToString("  ·  ")
 }

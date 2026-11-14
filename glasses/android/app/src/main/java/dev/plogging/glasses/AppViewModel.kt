@@ -57,6 +57,8 @@ data class UiState(
     val picks: Int = 0,
     val lastPick: Pick? = null,
     val tiltDegrees: Float? = null,
+    val hands: List<HandPose> = emptyList(),
+    val handTracking: Boolean = false,
 ) {
   /** Glasses mode needs the app to be registered with the Meta AI app first. */
   val needsRegistration: Boolean
@@ -79,6 +81,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
   private var glassesReady = false
   private var detector: ObjectDetector? = null
   private var pickDetector = PickDetector()
+  private var handTracker: HandTracker? = null
   private var tone: ToneGenerator? = null
   private var run: Job? = null
 
@@ -152,6 +155,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
           picks = 0,
           lastPick = null,
           tiltDegrees = null,
+          hands = emptyList(),
       )
     }
 
@@ -160,10 +164,11 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
       var detecting: Job? = null
       try {
         val detector = loadDetector()
+        val tracker = loadHands()
         requestLocation()
         location.start()
         reporter.beginSession()
-        detecting = launch(Dispatchers.Default) { pendingFrames.collect { detect(it, detector) } }
+        detecting = launch(Dispatchers.Default) { pendingFrames.collect { detect(it, detector, tracker) } }
 
         val onFrame: (Bitmap) -> Unit = { frame ->
           _frame.value = frame
@@ -216,6 +221,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
               detections = emptyList(),
               detectionsPerSecond = 0,
               tiltDegrees = null,
+              hands = emptyList(),
           )
         }
       }
@@ -250,16 +256,18 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
   private val resultTimes = ArrayDeque<Long>()
 
   /** Runs on a background thread, one frame at a time. */
-  private fun detect(frame: Bitmap, detector: ObjectDetector) {
+  private fun detect(frame: Bitmap, detector: ObjectDetector, tracker: HandTracker) {
     val startedAt = System.nanoTime()
     val detections = detector.detect(frame)
+    val hands = tracker.detect(frame)
     val now = System.nanoTime()
 
     resultTimes.addLast(now)
     while (now - resultTimes.first() > 1_000_000_000L) resultTimes.removeFirst()
 
-    reporter.note(detections, location.fix.value, System.currentTimeMillis())
-    val pick = pickDetector.onDetections(detections, System.currentTimeMillis())
+    val seenAt = System.currentTimeMillis()
+    reporter.note(detections, location.fix.value, seenAt)
+    val pick = pickDetector.onFrame(detections, hands, seenAt)
 
     _uiState.update {
       if (!it.isRunning) return@update it
@@ -269,6 +277,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
           inferenceMilliseconds = (now - startedAt) / 1_000_000f,
           picks = if (pick != null) it.picks + 1 else it.picks,
           lastPick = pick ?: it.lastPick,
+          hands = hands,
+          handTracking = tracker.available,
       )
     }
     if (pick != null) playPickTone()
@@ -294,6 +304,9 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     } catch (_: RuntimeException) {}
   }
 
+  private suspend fun loadHands(): HandTracker =
+      handTracker ?: withContext(Dispatchers.Default) { HandTracker.open(getApplication()) }.also { handTracker = it }
+
   private suspend fun loadDetector(): ObjectDetector =
       detector
           ?: withContext(Dispatchers.Default) { ObjectDetector.load(getApplication()) }
@@ -310,6 +323,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     location.stop()
     reporter.endSession()
     detector?.close()
+    handTracker?.close()
+    handTracker = null
     tone?.release()
     tone = null
   }

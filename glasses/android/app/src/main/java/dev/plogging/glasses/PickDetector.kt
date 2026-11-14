@@ -13,6 +13,44 @@ data class MotionReading(
 
 data class Pick(val label: String, val t: Long)
 
+data class HandPoint(val x: Float, val y: Float)
+
+data class HandPose(val points: List<HandPoint>) {
+
+  fun curl(): Float {
+    if (points.size <= MIDDLE_MCP) return OPEN_CURL
+    val wrist = points[WRIST]
+    val palm = distance(wrist, points[MIDDLE_MCP]).coerceAtLeast(0.02f)
+    val tips = FINGERTIPS.map { distance(wrist, points[it]) / palm }
+    return tips.average().toFloat()
+  }
+
+  fun touches(box: Detection): Boolean = fingertipsInside(box.left, box.top, box.right, box.bottom)
+
+  fun fingertipsInside(left: Float, top: Float, right: Float, bottom: Float): Boolean {
+    if (points.size <= FINGERTIPS.max()) return false
+    val padX = maxOf(0.08f, (right - left) * 0.25f)
+    val padY = maxOf(0.08f, (bottom - top) * 0.25f)
+    return FINGERTIPS.any { index ->
+      val point = points[index]
+      point.x in (left - padX)..(right + padX) && point.y in (top - padY)..(bottom + padY)
+    }
+  }
+
+  private companion object {
+    const val WRIST = 0
+    const val MIDDLE_MCP = 9
+    const val OPEN_CURL = 2.5f
+    val FINGERTIPS = intArrayOf(4, 8, 12, 16, 20)
+  }
+}
+
+private fun distance(a: HandPoint, b: HandPoint): Float {
+  val dx = a.x - b.x
+  val dy = a.y - b.y
+  return sqrt(dx * dx + dy * dy)
+}
+
 /**
  * Counts a pick when the wearer bends toward litter that was just in view.
  *
@@ -30,6 +68,9 @@ class PickDetector {
     const val MAX_BEND_MS = 8_000L
     const val LITTER_WINDOW_MS = 2_500L
     const val MIN_LITTER_FRAMES = 2
+    const val PICK_COOLDOWN_MS = 1_200L
+    const val CLOSED_CURL = 1.45f
+    const val CURL_DROP = 0.45f
     private const val MAX_DT_S = 0.5
     private const val MIN_NORM = 1e-3
   }
@@ -49,7 +90,9 @@ class PickDetector {
   private var bending = false
   private var bendStartedMs: Long? = null
   private var countedThisBend = false
+  private var lastPickMs = Long.MIN_VALUE
   private val recentLitter = ArrayDeque<Pair<Long, String>>()
+  private val held = mutableListOf<Held>()
 
   @Synchronized
   fun onMotion(reading: MotionReading, nowMs: Long): Pick? {
@@ -93,15 +136,20 @@ class PickDetector {
   }
 
   @Synchronized
-  fun onDetections(detections: List<Detection>, nowMs: Long): Pick? {
+  fun onDetections(detections: List<Detection>, nowMs: Long): Pick? =
+      onFrame(detections, emptyList(), nowMs)
+
+  @Synchronized
+  fun onFrame(detections: List<Detection>, hands: List<HandPose>, nowMs: Long): Pick? {
     pruneLitter(nowMs)
     if (detections.isNotEmpty()) {
       recentLitter.addLast(nowMs to detections.maxBy { it.confidence }.label)
     }
-    if (!bending || countedThisBend) return null
-    val started = bendStartedMs ?: return null
-    if (nowMs - started < MIN_BEND_MS) return null
-    return maybePick(nowMs)
+    val fromHand = handPick(detections, hands, nowMs)
+    if (!bending || countedThisBend) return fromHand
+    val started = bendStartedMs ?: return fromHand
+    if (nowMs - started < MIN_BEND_MS) return fromHand
+    return fromHand ?: maybePick(nowMs)
   }
 
   private fun updateBend(tilt: Double, nowMs: Long): Pick? {
@@ -137,9 +185,68 @@ class PickDetector {
   private fun maybePick(nowMs: Long): Pick? {
     pruneLitter(nowMs)
     if (recentLitter.size < MIN_LITTER_FRAMES) return null
-    countedThisBend = true
-    return Pick(recentLitter.last().second, nowMs)
+    return emit(recentLitter.last().second, nowMs)
   }
+
+  private fun handPick(detections: List<Detection>, hands: List<HandPose>, nowMs: Long): Pick? {
+    if (hands.isEmpty() && held.isEmpty()) return null
+    val next = mutableListOf<Held>()
+    val touched = mutableSetOf<Held>()
+    for (detection in detections) {
+      val onIt = hands.filter { it.touches(detection) }
+      if (onIt.isEmpty()) continue
+      val curl = onIt.minOf { it.curl() }
+      val existing = held.firstOrNull { it.label == detection.label && !touched.contains(it) }
+      val item =
+          if (existing == null) {
+            Held(detection.label, detection.left, detection.top, detection.right, detection.bottom, 1, curl)
+          } else {
+            existing.seen += 1
+            existing.left = detection.left
+            existing.top = detection.top
+            existing.right = detection.right
+            existing.bottom = detection.bottom
+            existing.openCurl = maxOf(existing.openCurl, curl)
+            existing
+          }
+      touched += item
+      val closed = item.seen >= 2 && item.openCurl - curl >= CURL_DROP && curl <= CLOSED_CURL
+      if (closed) {
+        held.clear()
+        return emit(item.label, nowMs)
+      }
+      next += item
+    }
+    for (item in held) {
+      if (item in touched) continue
+      val stillThere = hands.any { it.fingertipsInside(item.left, item.top, item.right, item.bottom) }
+      if (stillThere && item.seen >= 2) {
+        held.clear()
+        return emit(item.label, nowMs)
+      }
+    }
+    held.clear()
+    held += next
+    return null
+  }
+
+  private fun emit(label: String, nowMs: Long): Pick? {
+    if (lastPickMs != Long.MIN_VALUE && nowMs - lastPickMs < PICK_COOLDOWN_MS) return null
+    lastPickMs = nowMs
+    countedThisBend = true
+    held.clear()
+    return Pick(label, nowMs)
+  }
+
+  private class Held(
+      val label: String,
+      var left: Float,
+      var top: Float,
+      var right: Float,
+      var bottom: Float,
+      var seen: Int,
+      var openCurl: Float,
+  )
 
   private fun pruneLitter(nowMs: Long) {
     while (recentLitter.isNotEmpty() && nowMs - recentLitter.first().first > LITTER_WINDOW_MS) {

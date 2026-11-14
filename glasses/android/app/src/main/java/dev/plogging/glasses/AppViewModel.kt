@@ -63,6 +63,8 @@ data class UiState(
     val tiltDegrees: Float? = null,
     val hands: List<HandPose> = emptyList(),
     val handTracking: Boolean = false,
+    val isRecording: Boolean = false,
+    val recordingMessage: String? = null,
 ) {
   /** Glasses mode needs the app to be registered with the Meta AI app first. */
   val needsRegistration: Boolean
@@ -86,7 +88,9 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
   val displayPreview = glasses.displayPreview
   private var spotter = Spotter()
   private var spot: Spot? = null
-  private var displayCard: DisplayCard? = null
+  @Volatile private var displayCard: DisplayCard? = null
+  private val recorder = DisplayRecorder(application)
+  @Volatile private var recordArmed = false
 
   private val location = PhoneLocation(application)
   private val reporter = SightingReporter(application)
@@ -129,6 +133,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
   private val handReady = Channel<Unit>(Channel.CONFLATED)
   @Volatile private var latestHands: List<HandPose> = emptyList()
   @Volatile private var latestDetections: List<Detection> = emptyList()
+  private var lastHandMs = 0L
 
   // MARK: Actions
 
@@ -200,6 +205,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
           pendingFrames.tryEmit(frame)
           handSlot.getAndSet(HandTracker.scaled(frame))?.recycle()
           handReady.trySend(Unit)
+          if (recordArmed) recorder.offer(frame, displayCard ?: DisplayCard.LOOKING)
         }
 
         if (kind == SourceKind.VIDEO_FILE) {
@@ -243,6 +249,13 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
           tracking?.join()
         }
         handSlot.getAndSet(null)?.recycle()
+        val saved =
+            if (recordArmed) {
+              recordArmed = false
+              withContext(NonCancellable) { recorder.finish() }
+            } else {
+              null
+            }
         location.stop()
         reporter.endSession()
         _frame.value = null
@@ -254,9 +267,33 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
               detectionsPerSecond = 0,
               tiltDegrees = null,
               hands = emptyList(),
+              isRecording = false,
+              recordingMessage = saved?.let { "Saved Movies/Plogging/$it" } ?: recorder.failure,
           )
         }
       }
+    }
+  }
+
+  /** Records the glasses camera with the display card drawn on it. Only while a session runs. */
+  fun toggleRecording() {
+    if (!_uiState.value.isRunning) return
+    if (recordArmed) {
+      recordArmed = false
+      _uiState.update { it.copy(isRecording = false, recordingMessage = "Saving the video…") }
+      viewModelScope.launch(Dispatchers.Default) {
+        val name = recorder.finish()
+        _uiState.update {
+          it.copy(
+              isRecording = false,
+              recordingMessage = name?.let { file -> "Saved Movies/Plogging/$file" } ?: recorder.failure ?: "Recording failed",
+          )
+        }
+      }
+    } else {
+      recorder.arm()
+      recordArmed = true
+      _uiState.update { it.copy(isRecording = true, recordingMessage = "Recording") }
     }
   }
 
@@ -325,12 +362,18 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
           } finally {
             small.recycle()
           }
-      latestHands = hands
-      val pick = pickDetector.onFrame(latestDetections, hands, System.currentTimeMillis())
+      val now = System.currentTimeMillis()
+      if (hands.isNotEmpty()) {
+        latestHands = hands
+        lastHandMs = now
+      }
+      val shown = if (now - lastHandMs <= PickDetector.HAND_GAP_MS) latestHands else emptyList()
+      if (shown.isEmpty()) latestHands = emptyList()
+      val pick = pickDetector.onFrame(latestDetections, shown, now)
       _uiState.update {
         if (!it.isRunning) return@update it
         it.copy(
-            hands = hands,
+            hands = shown,
             handTracking = tracker.available,
             picks = if (pick != null) it.picks + 1 else it.picks,
             lastPick = pick ?: it.lastPick,

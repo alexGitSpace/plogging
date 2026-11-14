@@ -123,7 +123,10 @@ fun MainScreen(
     )
 
     Column(modifier = Modifier.fillMaxSize().padding(horizontal = 18.dp, vertical = 16.dp)) {
-      HudTopBar(state = state, onMenu = { menuOpen = !menuOpen })
+      HudTopBar(state = state, onMenu = { menuOpen = !menuOpen }, onRecord = viewModel::toggleRecording)
+      state.recordingMessage?.let { message ->
+        Text(message, color = Leaf, fontSize = 12.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(top = 6.dp))
+      }
       PickBanner(state.lastPick)
       displayStatus?.let { GlassesDisplay(it, displayPreview, Modifier.padding(top = 10.dp)) }
       Spacer(Modifier.weight(1f))
@@ -218,7 +221,7 @@ private fun EmptyViewfinder(isRunning: Boolean, needsRegistration: Boolean) {
 }
 
 @Composable
-private fun HudTopBar(state: UiState, onMenu: () -> Unit) {
+private fun HudTopBar(state: UiState, onMenu: () -> Unit, onRecord: () -> Unit) {
   Row(
       modifier = Modifier.fillMaxWidth(),
       verticalAlignment = Alignment.CenterVertically,
@@ -243,6 +246,30 @@ private fun HudTopBar(state: UiState, onMenu: () -> Unit) {
     }
 
     Row(verticalAlignment = Alignment.CenterVertically) {
+      if (state.isRunning) {
+        Surface(
+            modifier = Modifier.height(36.dp).clickable(onClick = onRecord)
+                .semantics { contentDescription = if (state.isRecording) "Stop recording" else "Record glasses and display" },
+            shape = RoundedCornerShape(50),
+            color = if (state.isRecording) Coral else NightSurface,
+            border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.12f)),
+        ) {
+          Row(
+              modifier = Modifier.padding(horizontal = 12.dp),
+              verticalAlignment = Alignment.CenterVertically,
+          ) {
+            Box(Modifier.size(8.dp).clip(CircleShape).background(if (state.isRecording) Color.White else Coral))
+            Spacer(Modifier.width(6.dp))
+            Text(
+                "REC",
+                color = if (state.isRecording) Color.White else Mist,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+            )
+          }
+        }
+        Spacer(Modifier.width(8.dp))
+      }
       if (state.isRunning || state.picks > 0) {
         Surface(
             shape = RoundedCornerShape(50),

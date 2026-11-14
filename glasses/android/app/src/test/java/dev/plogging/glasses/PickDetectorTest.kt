@@ -43,6 +43,7 @@ class PickDetectorTest {
     val detector = PickDetector()
     val cup = Detection("Cup", 0.9f, 0.35f, 0.25f, 0.65f, 0.7f)
     assertNull(detector.onFrame(listOf(cup), listOf(pose(0.30f)), 0L))
+    assertNull(detector.onFrame(listOf(cup), emptyList(), 40L))
     val pick = detector.onFrame(listOf(cup), listOf(pose(0.58f)), 200L)
     assertEquals("Cup", pick?.label)
     assertNull(detector.onFrame(listOf(cup), listOf(pose(0.58f)), 400L))

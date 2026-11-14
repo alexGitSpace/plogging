@@ -69,6 +69,7 @@ class PickDetector {
     const val LITTER_WINDOW_MS = 2_500L
     const val MIN_LITTER_FRAMES = 2
     const val PICK_COOLDOWN_MS = 1_200L
+    const val HAND_GAP_MS = 300L
     const val CLOSED_CURL = 1.45f
     const val CURL_DROP = 0.45f
     private const val MAX_DT_S = 0.5
@@ -91,6 +92,7 @@ class PickDetector {
   private var bendStartedMs: Long? = null
   private var countedThisBend = false
   private var lastPickMs = Long.MIN_VALUE
+  private var lastHandMs = Long.MIN_VALUE
   private val recentLitter = ArrayDeque<Pair<Long, String>>()
   private val held = mutableListOf<Held>()
 
@@ -189,6 +191,11 @@ class PickDetector {
   }
 
   private fun handPick(detections: List<Detection>, hands: List<HandPose>, nowMs: Long): Pick? {
+    if (hands.isNotEmpty()) {
+      lastHandMs = nowMs
+    } else if (held.isNotEmpty() && lastHandMs != Long.MIN_VALUE && nowMs - lastHandMs < HAND_GAP_MS) {
+      return null
+    }
     if (hands.isEmpty() && held.isEmpty()) return null
     val next = mutableListOf<Held>()
     val touched = mutableSetOf<Held>()

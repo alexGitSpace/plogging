@@ -14,6 +14,7 @@ cd web && python3 -m http.server 5173   # http://localhost:5173
 |---|---|---|
 | API address | `?api=https://â€¦` in the page address, remembered in the browser (`?api=default` forgets it); or `js/config.js` (copy `js/config.example.js`, not in git) | `http://localhost:8000` |
 | You | `?user=<nickname>`, or the selector at the bottom of the sidebar | The leader of the leaderboard |
+| Test data | `?mock` shows Feed, Quests, Leaders and Profile on the test users of `js/mock.js`. Without the API they use them by themselves | Off |
 
 The API address stays out of git: the API has no authentication yet. Ask in the team chat. The shared API already holds simulated outings of 10 people; for a live outing, run `python3 api/sim.py live` ([api/README.md](../api/README.md#simulator)).
 
@@ -35,6 +36,10 @@ docker build -t plogging-web web && docker run -p 8080:8080 -e API_URL=https://â
 | `js/api.js` | One function per API request, `poll()` for live screens, `weekStart()` for "this week", and the two settings |
 | `js/map.js` | A Leaflet map in the light style of the mockup |
 | `js/ui.js` | `esc()`, formatting (`km`, `duration`, `clock`, `ago`), litter names and icons |
+| `js/game.js` | Game rules: points, streaks, daily and weekly quests, Claim, badges, leaderboard scopes. Also `data`, the API with a fallback to test data |
+| `js/mock.js` | Test users: full names, neighbourhoods, friends, people from other cities, and made-up outings when the API is down |
+| `js/widgets.js` | Avatars, progress bars, the goal ring, hexagon badges and the SVG mini map of a route |
+| `css/screens.css` | Styles of Feed, Quests, Leaderboard and Profile |
 | `js/views/` | One module per screen |
 | `assets/` | Images and 3D models; keep each file under a few MB |
 
@@ -49,7 +54,7 @@ docker build -t plogging-web web && docker run -p 8080:8080 -e API_URL=https://â
 
 ## Screens
 
-From the mockup, and where each takes its data. The shell already routes to all of them; each fetches its data and shows a placeholder.
+From the mockup, and where each takes its data. Feed, Quests, Leaderboard and Profile are built; names, friends, cities, likes, "Join" and claimed quests are test data or stay in the browser.
 
 | Screen | In the mockup | Data |
 |---|---|---|

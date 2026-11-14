@@ -21,6 +21,19 @@ Or in Docker: `docker build -t plogging-api . && docker run -p 8000:8000 -v plog
 | `DATABASE_PATH` | `data/events.db` (`/data/events.db` in Docker) | SQLite file with the events |
 | `PORT` | `8000` | Port in Docker; hosts usually set it |
 
+## Deploy
+
+The shared API runs on [Railway](https://railway.com) and deploys itself after every push to `main` that changes this folder. Its URL is in the team chat, not in the repository: the API has no authentication yet.
+
+| Railway setting | Value | Why |
+|---|---|---|
+| Root Directory | `/api` | Builds this folder with its Dockerfile |
+| Watch Paths | `/api/**` | Pushes to other folders do not redeploy the API |
+| Volume | Mounted at `/data` | Events survive deploys and restarts |
+| Region | EU West | Closest to Espoo |
+
+Every deploy stops the API for a few seconds: Railway never runs two copies of a service with a volume. Devices resend what failed, as the contract says.
+
 ## What it serves
 
 | Route | What |

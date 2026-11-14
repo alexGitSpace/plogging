@@ -17,6 +17,9 @@ import com.meta.wearable.dat.core.session.DeviceSession
 import com.meta.wearable.dat.core.session.DeviceSessionState
 import com.meta.wearable.dat.core.types.DatError
 import com.meta.wearable.dat.core.types.DatResult
+import com.meta.wearable.dat.core.types.DeviceType
+import com.meta.wearable.dat.core.types.DonState
+import com.meta.wearable.dat.core.types.HingeState
 import com.meta.wearable.dat.core.types.Permission
 import com.meta.wearable.dat.core.types.PermissionStatus
 import com.meta.wearable.dat.core.types.RegistrationState
@@ -32,6 +35,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -107,10 +111,16 @@ class GlassesSource(private val context: Context) {
         Feed.MockPhoneCamera -> pairMockGlasses { it.setCameraFeed(CameraFacing.BACK) }
       }
 
-      // 1. Wait until some glasses are powered on, unfolded and in range.
-      onStatus("Looking for glasses…")
-      val selector = AutoDeviceSelector()
-      selector.activeDeviceFlow().first { it != null }
+      // This phone can have a Ray-Ban Meta and a Meta Ray-Ban Display connected at
+      // once. The default selector takes the first connected pair, which is the
+      // folded Ray-Ban Meta, and the session then fails as device unavailable.
+      onStatus("Looking for Meta Ray-Ban Display…")
+      val selector = AutoDeviceSelector { it.deviceType == DeviceType.META_RAYBAN_DISPLAY }
+      val deviceId = selector.activeDeviceFlow().filterNotNull().first()
+      onStatus("Unfold the glasses and put them on…")
+      Wearables.devicesMetadata[deviceId]?.first { device ->
+        device.hingeState != HingeState.CLOSED && device.donState != DonState.DOFFED
+      }
 
       // 2. Open a session with them.
       onStatus("Connecting to the glasses…")
@@ -205,7 +215,9 @@ private fun DatError.userMessage(): String {
   val raw = description
   return when {
     "DEVICE_UNAVAILABLE" in raw ->
-        "The glasses are not available. Unfold them, put them on, and tap Start."
+        "Meta Ray-Ban Display is not ready. Unfold them, put them on, and tap Start."
+    "DAT_APP" in raw || "DWA_" in raw ->
+        "Update the glasses in the Meta AI app: Device Access Toolkit has to be installed on the Meta Ray-Ban Display."
     else -> raw
   }
 }

@@ -50,8 +50,8 @@ data class HandPose(val points: List<HandPoint>) {
   }
 
   private fun inside(point: HandPoint, box: Detection): Boolean {
-    val padX = maxOf(0.06f, (box.right - box.left) * 0.22f)
-    val padY = maxOf(0.06f, (box.bottom - box.top) * 0.22f)
+    val padX = maxOf(0.04f, (box.right - box.left) * 0.14f)
+    val padY = maxOf(0.04f, (box.bottom - box.top) * 0.14f)
     return point.x in (box.left - padX)..(box.right + padX) &&
         point.y in (box.top - padY)..(box.bottom + padY)
   }
@@ -60,8 +60,8 @@ data class HandPose(val points: List<HandPoint>) {
     const val WRIST = 0
     const val MIDDLE_MCP = 9
     const val OPEN_CURL = 2.5f
-    const val WEARER_PALM = 0.04f
-    const val WEARER_WRIST_Y = 0.32f
+    const val WEARER_PALM = 0.05f
+    const val WEARER_WRIST_Y = 0.42f
     val FINGERTIPS = intArrayOf(4, 8, 12, 16, 20)
   }
 }
@@ -81,20 +81,20 @@ class PickDetector {
   companion object {
     const val FAST_TAU_S = 0.2
     const val SLOW_TAU_S = 10.0
-    const val BEND_ENTER_DEG = 40.0
-    const val BEND_EXIT_DEG = 20.0
-    const val MIN_BEND_MS = 400L
+    const val BEND_ENTER_DEG = 58.0
+    const val BEND_EXIT_DEG = 35.0
+    const val MIN_BEND_MS = 700L
     const val MAX_BEND_MS = 8_000L
     const val LITTER_WINDOW_MS = 2_500L
     const val MIN_LITTER_FRAMES = 2
     const val PICK_COOLDOWN_MS = 700L
-    const val HAND_GAP_MS = 500L
-    const val REACH_MS = 80L
-    const val MISSING_MS = 200L
+    const val HAND_GAP_MS = 400L
+    const val REACH_MS = 200L
+    const val MISSING_MS = 400L
     const val OPEN_CURL = 1.8f
-    const val CLOSED_CURL = 1.55f
-    const val CLOSED_SAMPLES = 1
-    const val WRIST_DOWN = 0.04f
+    const val CLOSED_CURL = 1.35f
+    const val CLOSED_SAMPLES = 2
+    const val WRIST_DOWN = 0.08f
     private const val MAX_DT_S = 0.5
     private const val MIN_NORM = 1e-3
   }
@@ -207,8 +207,9 @@ class PickDetector {
 
   private fun noteLitter(detections: List<Detection>, nowMs: Long) {
     pruneLitter(nowMs)
-    if (detections.isNotEmpty()) {
-      recentLitter.addLast(nowMs to detections.maxBy { it.confidence }.label)
+    val litter = detections.filter { it.countsAsLitter() }
+    if (litter.isNotEmpty()) {
+      recentLitter.addLast(nowMs to litter.maxBy { it.confidence }.label)
     }
   }
 
@@ -243,6 +244,7 @@ class PickDetector {
   private fun contact(detections: List<Detection>, hands: List<HandPose>): Contact? {
     var best: Contact? = null
     for (detection in detections) {
+      if (!detection.countsAsLitter()) continue
       for (hand in hands) {
         if (!hand.touches(detection)) continue
         val same = grab?.label == detection.label

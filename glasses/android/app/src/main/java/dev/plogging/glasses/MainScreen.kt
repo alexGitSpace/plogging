@@ -1,6 +1,9 @@
 package dev.plogging.glasses
 
+import android.content.Context
 import android.graphics.Bitmap
+import android.view.View
+import android.webkit.WebView
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
@@ -20,6 +23,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -37,6 +41,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -62,6 +67,7 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlin.math.max
 import kotlin.math.roundToInt
@@ -84,6 +90,8 @@ fun MainScreen(
 ) {
   val state by viewModel.uiState.collectAsStateWithLifecycle()
   val frame by viewModel.frame.collectAsStateWithLifecycle()
+  val displayStatus by viewModel.displayStatus.collectAsStateWithLifecycle()
+  val displayPreview by viewModel.displayPreview.collectAsStateWithLifecycle()
   var menuOpen by remember { mutableStateOf(false) }
   BackHandler(enabled = menuOpen) { menuOpen = false }
 
@@ -117,6 +125,7 @@ fun MainScreen(
     Column(modifier = Modifier.fillMaxSize().padding(horizontal = 18.dp, vertical = 16.dp)) {
       HudTopBar(state = state, onMenu = { menuOpen = !menuOpen })
       PickBanner(state.lastPick)
+      displayStatus?.let { GlassesDisplay(it, displayPreview, Modifier.padding(top = 10.dp)) }
       Spacer(Modifier.weight(1f))
       if (landscape) {
         Row(
@@ -288,6 +297,45 @@ private fun PickBanner(lastPick: Pick?) {
         fontWeight = FontWeight.Bold,
         modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
     )
+  }
+}
+
+/** What the display of the glasses is doing. Simulated glasses show the display itself too. */
+@Composable
+private fun GlassesDisplay(
+    status: String,
+    preview: ((Context) -> View)?,
+    modifier: Modifier = Modifier,
+) {
+  Surface(
+      modifier = modifier,
+      color = NightSurface,
+      shape = RoundedCornerShape(14.dp),
+      border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.13f)),
+  ) {
+    Row(Modifier.padding(10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+      if (preview != null) {
+        key(preview) {
+          // The display is 600 wide and the view shrinks it to a quarter at most: 150 dp shows it whole.
+          AndroidView(
+              factory = preview,
+              modifier = Modifier.size(150.dp).clip(RoundedCornerShape(8.dp)).background(Color.Black),
+              onRelease = { (it as? WebView)?.destroy() },
+          )
+        }
+      }
+      Column(Modifier.widthIn(max = 140.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+        Text("GLASSES DISPLAY", color = Moss, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
+        Text(
+            status,
+            color = Mist,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Medium,
+            maxLines = 4,
+            overflow = TextOverflow.Ellipsis,
+        )
+      }
+    }
   }
 }
 

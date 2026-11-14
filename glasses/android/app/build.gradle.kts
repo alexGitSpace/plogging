@@ -52,6 +52,7 @@ dependencies {
   implementation(libs.androidx.material3)
   implementation(libs.mwdat.core)
   implementation(libs.mwdat.camera)
+  implementation(libs.mwdat.display)
   implementation(libs.mwdat.motion)
   implementation(libs.mwdat.mockdevice)
   implementation(libs.onnxruntime.android)

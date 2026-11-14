@@ -13,4 +13,15 @@ data class Detection(
     val top: Float,
     val right: Float,
     val bottom: Float,
-)
+) {
+  fun countsAsLitter(): Boolean = label in NAMED_LITTER
+
+  private companion object {
+    val NAMED_LITTER =
+        setOf(
+            "Bottle",
+            "Can",
+            "Cup",
+        )
+  }
+}

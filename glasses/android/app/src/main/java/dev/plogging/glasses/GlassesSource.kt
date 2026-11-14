@@ -2,6 +2,7 @@ package dev.plogging.glasses
 
 import android.app.Activity
 import android.content.Context
+import android.content.Intent
 import android.graphics.Bitmap
 import android.net.Uri
 import android.os.SystemClock
@@ -19,9 +20,11 @@ import com.meta.wearable.dat.core.session.DeviceSession
 import com.meta.wearable.dat.core.session.DeviceSessionState
 import com.meta.wearable.dat.core.types.DatError
 import com.meta.wearable.dat.core.types.DatResult
+import com.meta.wearable.dat.core.types.Device
 import com.meta.wearable.dat.core.types.DeviceType
 import com.meta.wearable.dat.core.types.DonState
 import com.meta.wearable.dat.core.types.HingeState
+import com.meta.wearable.dat.core.types.LinkState
 import com.meta.wearable.dat.core.types.Permission
 import com.meta.wearable.dat.core.types.PermissionStatus
 import com.meta.wearable.dat.core.types.RegistrationState
@@ -118,10 +121,17 @@ class GlassesSource(private val context: Context) {
   val registered: Flow<Boolean>
     get() = Wearables.registrationState.map { it == RegistrationState.REGISTERED }
 
+  fun isRegistered(): Boolean = Wearables.registrationState.value == RegistrationState.REGISTERED
+
   /** Opens the Meta AI app, where the user confirms this app. */
   fun register(activity: Activity) = Wearables.startRegistration(activity)
 
   fun unregister(activity: Activity) = Wearables.startUnregistration(activity)
+
+  /** Meta AI returns here through the `ploggingglasses` link. */
+  fun handleIncoming(activity: Activity, intent: Intent) {
+    Wearables.handleIntent(intent) { request -> request.continueRegistration(activity) }
+  }
 
   // MARK: Streaming
 
@@ -154,16 +164,26 @@ class GlassesSource(private val context: Context) {
         Feed.MockPhoneCamera -> pairMockGlasses { it.setCameraFeed(CameraFacing.BACK) }
       }
 
-      // A connected pair wins over a bonded one that is off. Display glasses and
-      // camera glasses (Ray-Ban Meta) are both accepted.
+      // A phone can have Ray-Ban Meta and Meta Ray-Ban Display at once. Take the
+      // pair that is on the head, then the one with a display.
       onStatus("Looking for glasses…")
-      val selector = AutoDeviceSelector { it.deviceType.streamsCamera() }
-      val deviceId = selector.activeDeviceFlow().filterNotNull().first()
+      val selector =
+          AutoDeviceSelector(
+              compareByDescending<Device> { it.linkState == LinkState.CONNECTED }
+                  .thenByDescending { it.donState == DonState.DONNED }
+                  .thenByDescending { it.hingeState != HingeState.CLOSED }
+                  .thenByDescending { it.isDisplayCapable() },
+              { it.deviceType.streamsCamera() },
+          )
       onStatus("Unfold the glasses and put them on…")
-      val ready =
-          Wearables.devicesMetadata[deviceId]?.first { device ->
-            device.hingeState != HingeState.CLOSED && device.donState != DonState.DOFFED
+      val deviceId =
+          selector.activeDeviceFlow().filterNotNull().first { id ->
+            val device = Wearables.devicesMetadata[id]?.value ?: return@first false
+            device.linkState == LinkState.CONNECTED &&
+                device.hingeState != HingeState.CLOSED &&
+                device.donState != DonState.DOFFED
           }
+      val ready = Wearables.devicesMetadata[deviceId]?.value
 
       // 2. Open a session with them.
       onStatus("Connecting to ${ready?.name ?: "the glasses"}…")

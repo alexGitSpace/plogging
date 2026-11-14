@@ -1,31 +1,38 @@
 package dev.plogging.glasses
 
 import android.graphics.Bitmap
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -36,10 +43,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
@@ -48,7 +58,16 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlin.math.max
 import kotlin.math.roundToInt
+
+private val Night = Color(0xFF08110E)
+private val NightSurface = Color(0xE614201A)
+private val NightSurfaceStrong = Color(0xF20D1914)
+private val Leaf = Color(0xFFC4F36B)
+private val Mist = Color(0xFFE8F0E9)
+private val Moss = Color(0xFF9AAA9E)
+private val Coral = Color(0xFFFF8067)
 
 @Composable
 fun MainScreen(
@@ -58,17 +77,83 @@ fun MainScreen(
     onDisconnectGlasses: () -> Unit,
 ) {
   val state by viewModel.uiState.collectAsStateWithLifecycle()
+  val frame by viewModel.frame.collectAsStateWithLifecycle()
+  var menuOpen by remember { mutableStateOf(false) }
+  BackHandler(enabled = menuOpen) { menuOpen = false }
+  LaunchedEffect(state.glassesRegistered, state.sourceKind) {
+    if (state.glassesRegistered && state.sourceKind == SourceKind.GLASSES && !state.isRunning) {
+      onStart()
+    }
+  }
 
-  Surface(modifier = Modifier.fillMaxSize()) {
-    Column(
-        modifier = Modifier.fillMaxSize().safeDrawingPadding().padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-      SourcePicker(state, onSelect = viewModel::select)
-      Preview(viewModel, state.isRunning, state.detections, Modifier.weight(1f))
-      StatusLine(state, hasFrame = viewModel.frame.collectAsStateWithLifecycle().value != null)
-      DetectionList(state.detections)
-      Controls(state, onStart, viewModel::stop, onConnectGlasses, onDisconnectGlasses)
+  BoxWithConstraints(modifier = Modifier.fillMaxSize().background(Night)) {
+    val landscape = maxWidth > maxHeight
+
+    if (frame != null) {
+      FrameView(frame!!, state.detections, fitInside = landscape, modifier = Modifier.fillMaxSize())
+    } else {
+      EmptyViewfinder(state.isRunning, state.needsRegistration)
+    }
+
+    // Keep the camera legible while giving the floating HUD enough contrast.
+    Box(
+        Modifier.fillMaxSize().background(
+            Brush.verticalGradient(
+                0f to Color.Black.copy(alpha = 0.62f),
+                0.26f to Color.Transparent,
+                0.62f to Color.Transparent,
+                1f to Color.Black.copy(alpha = 0.76f),
+            )
+        )
+    )
+
+    Column(modifier = Modifier.fillMaxSize().padding(horizontal = 18.dp, vertical = 16.dp)) {
+      HudTopBar(state = state, onMenu = { menuOpen = !menuOpen })
+      Spacer(Modifier.weight(1f))
+      if (landscape) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.Bottom,
+        ) {
+          DetectionHud(state, hasFrame = frame != null, Modifier.weight(1f))
+          PrimaryAction(
+              state = state,
+              onStart = onStart,
+              onStop = viewModel::stop,
+              onConnect = onConnectGlasses,
+              modifier = Modifier.width(176.dp),
+          )
+        }
+      } else {
+        DetectionHud(state, hasFrame = frame != null)
+        Spacer(Modifier.height(10.dp))
+        PrimaryAction(
+            state = state,
+            onStart = onStart,
+            onStop = viewModel::stop,
+            onConnect = onConnectGlasses,
+            modifier = Modifier.fillMaxWidth(),
+        )
+      }
+    }
+
+    if (menuOpen) {
+      Box(
+          Modifier.fillMaxSize()
+              .background(Color.Black.copy(alpha = 0.42f))
+              .clickable { menuOpen = false }
+      )
+      MenuPanel(
+          state = state,
+          onSelectSource = viewModel::select,
+          onStart = onStart,
+          onStop = viewModel::stop,
+          onConnect = onConnectGlasses,
+          onDisconnect = onDisconnectGlasses,
+          onClose = { menuOpen = false },
+          modifier = Modifier.align(Alignment.TopEnd).padding(top = 76.dp, end = 18.dp),
+      )
     }
   }
 
@@ -83,100 +168,329 @@ fun MainScreen(
 }
 
 @Composable
-private fun SourcePicker(state: UiState, onSelect: (SourceKind) -> Unit) {
-  var expanded by remember { mutableStateOf(false) }
-  Column {
-    Box {
-      TextButton(onClick = { expanded = true }, enabled = !state.isRunning) {
-        Text("${state.sourceKind.title} ▾", style = MaterialTheme.typography.titleMedium)
-      }
-      DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-        SourceKind.entries.forEach { kind ->
-          DropdownMenuItem(
-              text = { Text(kind.title) },
-              onClick = {
-                expanded = false
-                onSelect(kind)
-              },
-          )
-        }
-      }
-    }
+private fun EmptyViewfinder(isRunning: Boolean, needsRegistration: Boolean) {
+  Column(
+      modifier = Modifier.fillMaxSize().background(Night).padding(32.dp),
+      horizontalAlignment = Alignment.CenterHorizontally,
+      verticalArrangement = Arrangement.Center,
+  ) {
+    Text("PLOGGING", color = Leaf, fontSize = 13.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
+    Spacer(Modifier.height(12.dp))
     Text(
-        state.sourceKind.explanation,
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        when {
+          needsRegistration -> "Connect your Meta glasses"
+          isRunning -> "Finding your glasses"
+          else -> "Your view, with a little more impact."
+        },
+        color = Mist,
+        fontSize = 20.sp,
+        fontWeight = FontWeight.SemiBold,
+    )
+    Spacer(Modifier.height(6.dp))
+    Text(
+        when {
+          needsRegistration -> "Tap Connect glasses to authorize the live camera in Meta AI."
+          isRunning -> "Waiting for the first frame…"
+          else -> "Choose a camera source in the HUD menu to begin."
+        },
+        color = Moss,
+        fontSize = 13.sp,
     )
   }
 }
 
 @Composable
-private fun Preview(
-    viewModel: AppViewModel,
-    isRunning: Boolean,
-    detections: List<Detection>,
+private fun HudTopBar(state: UiState, onMenu: () -> Unit) {
+  Row(
+      modifier = Modifier.fillMaxWidth(),
+      verticalAlignment = Alignment.CenterVertically,
+      horizontalArrangement = Arrangement.SpaceBetween,
+  ) {
+    Row(
+        modifier = Modifier.clip(RoundedCornerShape(50)).background(NightSurface).padding(horizontal = 13.dp, vertical = 9.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+      Box(Modifier.size(8.dp).clip(CircleShape).background(if (state.isRunning) Leaf else Moss))
+      Spacer(Modifier.width(8.dp))
+      Column {
+        Text("PLOGGING", color = Mist, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.3.sp)
+        Text(
+            if (state.isRunning) "LIVE VIEW" else "VIEWFINDER",
+            color = if (state.isRunning) Leaf else Moss,
+            fontSize = 9.sp,
+            fontWeight = FontWeight.SemiBold,
+            letterSpacing = 0.8.sp,
+        )
+      }
+    }
+
+    Surface(
+        modifier = Modifier.size(48.dp).clickable(onClick = onMenu)
+            .semantics { contentDescription = "Open HUD menu" },
+        shape = CircleShape,
+        color = NightSurface,
+        border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.12f)),
+    ) {
+      Box(contentAlignment = Alignment.Center) {
+        Text(if (state.isRunning) "···" else "☰", color = Mist, fontSize = 21.sp, fontWeight = FontWeight.Bold)
+      }
+    }
+  }
+}
+
+@Composable
+private fun DetectionHud(state: UiState, hasFrame: Boolean, modifier: Modifier = Modifier) {
+  val grouped = remember(state.detections) {
+    state.detections.groupingBy { it.label }.eachCount().toSortedMap()
+  }
+  val summary = grouped.entries.joinToString("  ·  ") { (label, count) ->
+    if (count > 1) "$label ×$count" else label
+  }
+  val count = state.detections.size
+
+  Surface(
+      modifier = modifier,
+      color = NightSurface,
+      shape = RoundedCornerShape(18.dp),
+      border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.13f)),
+  ) {
+    Column(Modifier.padding(horizontal = 16.dp, vertical = 13.dp)) {
+      Row(verticalAlignment = Alignment.CenterVertically) {
+        Text("IN YOUR VIEW", color = Moss, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
+        Spacer(Modifier.weight(1f))
+        if (hasFrame) {
+          Text("$count ${if (count == 1) "OBJECT" else "OBJECTS"}", color = Leaf, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+        }
+      }
+      Spacer(Modifier.height(5.dp))
+      Text(
+          text = summary.ifEmpty { if (hasFrame) "Scanning for litter…" else state.status },
+          color = Mist,
+          fontSize = 15.sp,
+          fontWeight = FontWeight.SemiBold,
+          maxLines = 1,
+          overflow = TextOverflow.Ellipsis,
+      )
+      if (hasFrame) {
+        Spacer(Modifier.height(5.dp))
+        Text(
+            "${state.detectionsPerSecond} fps  ·  ${state.inferenceMilliseconds.roundToInt()} ms",
+            color = Moss,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Medium,
+        )
+      }
+    }
+  }
+}
+
+@Composable
+private fun PrimaryAction(
+    state: UiState,
+    onStart: () -> Unit,
+    onStop: () -> Unit,
+    onConnect: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-  val frame by viewModel.frame.collectAsStateWithLifecycle()
-  Box(
-      modifier = modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(Color.Black),
-      contentAlignment = Alignment.Center,
+  val needsConnect = state.needsRegistration
+  val action = when {
+    needsConnect -> onConnect
+    state.isRunning -> onStop
+    else -> onStart
+  }
+  val title = when {
+    needsConnect -> "Connect glasses"
+    state.isRunning -> "Stop session"
+    else -> "Start plogging"
+  }
+  val subtitle = when {
+    needsConnect -> "Pair with Meta AI"
+    state.isRunning -> "Tap to end live view"
+    else -> "Begin live detection"
+  }
+
+  Button(
+      onClick = action,
+      modifier = modifier.height(60.dp),
+      shape = RoundedCornerShape(18.dp),
+      colors = ButtonDefaults.buttonColors(
+          containerColor = if (state.isRunning) Coral else Leaf,
+          contentColor = Night,
+      ),
+      contentPadding = PaddingValues(horizontal = 18.dp, vertical = 7.dp),
   ) {
-    val current = frame
-    if (current != null) {
-      FrameView(current, detections)
-    } else {
-      Text(
-          if (isRunning) "Waiting for the first frame…" else "Press Start",
-          color = Color.White.copy(alpha = 0.7f),
-      )
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+      Text(title, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+      Text(subtitle, fontSize = 10.sp, fontWeight = FontWeight.Medium, maxLines = 1)
     }
   }
 }
 
-/** One frame with the boxes of the detected objects on top. */
 @Composable
-private fun FrameView(frame: Bitmap, detections: List<Detection>) {
-  val textMeasurer = rememberTextMeasurer()
-  val labelStyle = TextStyle(color = Color.Black, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-
-  // The box takes the shape of the frame, so the picture and the drawing layer match exactly.
-  Box(modifier = Modifier.aspectRatio(frame.width.toFloat() / frame.height)) {
-    Image(
-        bitmap = frame.asImageBitmap(),
-        contentDescription = null,
-        contentScale = ContentScale.Fit,
-        modifier = Modifier.fillMaxSize(),
-    )
-    Canvas(modifier = Modifier.fillMaxSize()) {
-      for (detection in detections) {
-        val color = colorFor(detection.label)
-        val topLeft = Offset(detection.left * size.width, detection.top * size.height)
-        val boxSize =
-            Size(
-                (detection.right - detection.left) * size.width,
-                (detection.bottom - detection.top) * size.height,
-            )
-        drawRoundRect(
-            color,
-            topLeft,
-            boxSize,
-            CornerRadius(4.dp.toPx()),
-            style = Stroke(2.dp.toPx()),
-        )
-
-        val text = "${detection.label} ${(detection.confidence * 100).roundToInt()}%"
-        val label = textMeasurer.measure(text, labelStyle)
-        val padding = 4.dp.toPx()
-        val tagSize = Size(label.size.width + 2 * padding, label.size.height + 2f)
-        // Keep the tag inside the picture: drawing text outside the canvas is an error.
-        val tagLeft = topLeft.x.coerceIn(0f, (size.width - tagSize.width).coerceAtLeast(0f))
-        val tagTop =
-            (topLeft.y - tagSize.height).coerceIn(0f, (size.height - tagSize.height).coerceAtLeast(0f))
-        drawRoundRect(color, Offset(tagLeft, tagTop), tagSize, CornerRadius(3.dp.toPx()))
-        if (tagSize.width <= size.width && tagSize.height <= size.height) {
-          drawText(label, topLeft = Offset(tagLeft + padding, tagTop + 1f))
+private fun MenuPanel(
+    state: UiState,
+    onSelectSource: (SourceKind) -> Unit,
+    onStart: () -> Unit,
+    onStop: () -> Unit,
+    onConnect: () -> Unit,
+    onDisconnect: () -> Unit,
+    onClose: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+  Surface(
+      modifier = modifier.fillMaxWidth(0.88f).width(360.dp).clickable(onClick = {}),
+      color = NightSurfaceStrong,
+      shape = RoundedCornerShape(24.dp),
+      border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.16f)),
+      shadowElevation = 22.dp,
+  ) {
+    Column(
+        Modifier.padding(18.dp).verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(9.dp),
+    ) {
+      Row(verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+          Text("HUD MENU", color = Leaf, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.4.sp)
+          Text("Camera source", color = Mist, fontSize = 19.sp, fontWeight = FontWeight.Bold)
         }
+        TextButton(onClick = onClose) { Text("Done", color = Moss) }
+      }
+
+      SourceKind.entries.forEach { kind ->
+        SourceOption(
+            kind = kind,
+            selected = state.sourceKind == kind,
+            enabled = !state.isRunning,
+            onClick = {
+              onSelectSource(kind)
+              onClose()
+            },
+        )
+      }
+
+      Text(
+          if (state.isRunning) "Stop the session before switching sources." else "Selected source: ${state.sourceKind.title}",
+          color = Moss,
+          fontSize = 11.sp,
+          modifier = Modifier.padding(top = 1.dp),
+      )
+
+      Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 3.dp)) {
+        if (state.isRunning) {
+          Button(
+              onClick = { onStop(); onClose() },
+              modifier = Modifier.weight(1f),
+              colors = ButtonDefaults.buttonColors(containerColor = Coral, contentColor = Night),
+              shape = RoundedCornerShape(14.dp),
+          ) { Text("Stop", fontWeight = FontWeight.Bold) }
+        } else if (state.needsRegistration) {
+          Button(
+              onClick = { onConnect(); onClose() },
+              modifier = Modifier.weight(1f),
+              colors = ButtonDefaults.buttonColors(containerColor = Leaf, contentColor = Night),
+              shape = RoundedCornerShape(14.dp),
+          ) { Text("Connect glasses", fontWeight = FontWeight.Bold) }
+        } else {
+          Button(
+              onClick = { onStart(); onClose() },
+              modifier = Modifier.weight(1f),
+              colors = ButtonDefaults.buttonColors(containerColor = Leaf, contentColor = Night),
+              shape = RoundedCornerShape(14.dp),
+          ) { Text("Start", fontWeight = FontWeight.Bold) }
+        }
+        if (state.sourceKind == SourceKind.GLASSES && !state.isRunning && !state.needsRegistration) {
+          OutlinedButton(
+              onClick = { onDisconnect(); onClose() },
+              modifier = Modifier.weight(1f),
+              shape = RoundedCornerShape(14.dp),
+              contentPadding = PaddingValues(horizontal = 8.dp),
+          ) { Text("Disconnect", maxLines = 1) }
+        }
+      }
+    }
+  }
+}
+
+@Composable
+private fun SourceOption(kind: SourceKind, selected: Boolean, enabled: Boolean, onClick: () -> Unit) {
+  val container = if (selected) Color(0xFF283B2D) else Color.White.copy(alpha = 0.045f)
+  Row(
+      modifier = Modifier.fillMaxWidth()
+          .clip(RoundedCornerShape(15.dp))
+          .background(container)
+          .border(1.dp, if (selected) Leaf.copy(alpha = 0.68f) else Color.White.copy(alpha = 0.08f), RoundedCornerShape(15.dp))
+          .clickable(enabled = enabled, onClick = onClick)
+          .padding(horizontal = 13.dp, vertical = 11.dp),
+      verticalAlignment = Alignment.CenterVertically,
+  ) {
+    Column(Modifier.weight(1f)) {
+      Text(
+          kind.title,
+          color = if (enabled) Mist else Moss,
+          fontSize = 13.sp,
+          fontWeight = FontWeight.SemiBold,
+          maxLines = 1,
+          overflow = TextOverflow.Ellipsis,
+      )
+      Text(
+          kind.explanation,
+          color = Moss,
+          fontSize = 10.sp,
+          lineHeight = 13.sp,
+          maxLines = 2,
+          overflow = TextOverflow.Ellipsis,
+      )
+    }
+    if (selected) {
+      Spacer(Modifier.width(10.dp))
+      Box(Modifier.size(8.dp).clip(CircleShape).background(Leaf))
+    }
+  }
+}
+
+/** Full-screen cropped viewfinder with detection bounds transformed to match the crop. */
+@Composable
+private fun FrameView(
+    frame: Bitmap,
+    detections: List<Detection>,
+    fitInside: Boolean,
+    modifier: Modifier = Modifier,
+) {
+  val textMeasurer = rememberTextMeasurer()
+  val labelStyle = TextStyle(color = Night, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+  Image(
+      bitmap = frame.asImageBitmap(),
+      contentDescription = "Live glasses camera view",
+      contentScale = if (fitInside) ContentScale.Fit else ContentScale.Crop,
+      modifier = modifier,
+  )
+  Canvas(modifier = modifier) {
+    val widthScale = size.width / frame.width
+    val heightScale = size.height / frame.height
+    val scale = if (fitInside) minOf(widthScale, heightScale) else max(widthScale, heightScale)
+    val drawnWidth = frame.width * scale
+    val drawnHeight = frame.height * scale
+    val cropX = (size.width - drawnWidth) / 2f
+    val cropY = (size.height - drawnHeight) / 2f
+
+    for (detection in detections) {
+      val color = colorFor(detection.label)
+      val topLeft = Offset(cropX + detection.left * drawnWidth, cropY + detection.top * drawnHeight)
+      val boxSize = Size(
+          (detection.right - detection.left) * drawnWidth,
+          (detection.bottom - detection.top) * drawnHeight,
+      )
+      drawRoundRect(color, topLeft, boxSize, CornerRadius(5.dp.toPx()), style = Stroke(2.dp.toPx()))
+
+      val text = "${detection.label} ${(detection.confidence * 100).roundToInt()}%"
+      val label = textMeasurer.measure(text, labelStyle)
+      val padding = 5.dp.toPx()
+      val tagSize = Size(label.size.width + padding * 2, label.size.height + 3f)
+      val tagLeft = topLeft.x.coerceIn(0f, (size.width - tagSize.width).coerceAtLeast(0f))
+      val tagTop = (topLeft.y - tagSize.height).coerceIn(0f, (size.height - tagSize.height).coerceAtLeast(0f))
+      drawRoundRect(color, Offset(tagLeft, tagTop), tagSize, CornerRadius(4.dp.toPx()))
+      if (tagSize.width <= size.width && tagSize.height <= size.height) {
+        drawText(label, topLeft = Offset(tagLeft + padding, tagTop + 1f))
       }
     }
   }
@@ -186,82 +500,4 @@ private fun FrameView(frame: Bitmap, detections: List<Detection>) {
 private fun colorFor(label: String): Color {
   val hue = label.fold(0) { seed, char -> (seed * 31 + char.code) % 360 }
   return Color.hsv(hue.toFloat(), 0.75f, 1f)
-}
-
-@Composable
-private fun StatusLine(state: UiState, hasFrame: Boolean) {
-  Row(modifier = Modifier.fillMaxWidth()) {
-    Text(
-        state.status,
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.weight(1f),
-    )
-    if (hasFrame) {
-      Text(
-          "${state.detectionsPerSecond} detections/s · ${state.inferenceMilliseconds.roundToInt()} ms",
-          style = MaterialTheme.typography.bodySmall,
-          color = MaterialTheme.colorScheme.onSurfaceVariant,
-      )
-    }
-  }
-}
-
-/** What is in the frame right now, such as "bottle ×2, person". */
-@Composable
-private fun DetectionList(detections: List<Detection>) {
-  val text =
-      detections
-          .groupingBy { it.label }
-          .eachCount()
-          .toSortedMap()
-          .map { (label, count) -> if (count > 1) "$label ×$count" else label }
-          .joinToString(", ")
-  Text(
-      text.ifEmpty { " " },
-      style = MaterialTheme.typography.titleMedium,
-      maxLines = 1,
-      overflow = TextOverflow.Ellipsis,
-  )
-}
-
-@Composable
-private fun Controls(
-    state: UiState,
-    onStart: () -> Unit,
-    onStop: () -> Unit,
-    onConnectGlasses: () -> Unit,
-    onDisconnectGlasses: () -> Unit,
-) {
-  Column(
-      modifier = Modifier.fillMaxWidth(),
-      horizontalAlignment = Alignment.CenterHorizontally,
-      verticalArrangement = Arrangement.spacedBy(4.dp),
-  ) {
-    if (state.needsRegistration) {
-      Button(onClick = onConnectGlasses) { Text("Connect glasses") }
-      Text(
-          "Opens the Meta AI app. Turn on Developer Mode there first.",
-          style = MaterialTheme.typography.bodySmall,
-          color = MaterialTheme.colorScheme.onSurfaceVariant,
-      )
-    } else {
-      Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        if (state.isRunning) {
-          Button(
-              onClick = onStop,
-              colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
-          ) {
-            Text("Stop")
-          }
-        } else {
-          Button(onClick = onStart) { Text("Start") }
-          if (state.sourceKind == SourceKind.GLASSES) {
-            OutlinedButton(onClick = onDisconnectGlasses) { Text("Disconnect") }
-          }
-        }
-      }
-      Spacer(Modifier)
-    }
-  }
 }

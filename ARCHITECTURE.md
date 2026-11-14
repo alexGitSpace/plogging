@@ -25,7 +25,6 @@ Every part talks only to the API. The events and the read endpoints are in the [
 | Glasses app | `glasses/` | Streams the glasses camera to the phone, runs YOLO, sends `sighting` with the phone's location | Android: sends `sighting`, shows litter on the Meta Ray-Ban Display. iOS: detection on screen, no sending |
 | Outing recorder | `web/` (`js/recorder.js`) | Records the outing on the map, like Strava: start, pause, finish, the GPS track | Done. The API's `/record` page is the older fallback |
 | Web app | `web/` | Map, outings, stats, quests, leaderboard, profile | Done, deployed |
-| Zones | `api/` | Pollution by area on the map: low, medium, high | Not started |
 
 ### Web app: front end and back end
 
@@ -36,13 +35,3 @@ Works on desktop and on the phone: below 760 px the sidebar becomes a bottom bar
 ### Where a pick is
 
 The grabber has no GPS. The API puts each pick on the route of the outing by time, so a pick is as accurate as the phone's GPS, about 5–15 m. For that, the grabber's clock must be in sync, and the grabber must be in the outing's `device_ids`.
-
-### Zones
-
-Show pollution by area instead of single objects:
-
-- The map is split into cells of about 100 m.
-- A cell scores by the litter the glasses saw there and nobody picked up; picks lower it.
-- Low, medium or high by thresholds that we pick on the demo data.
-
-Computing it in the API needs a new endpoint, for example `GET /api/zones`: a contract change, agree with the team first. A fallback without a contract change is to compute zones in the web app from `GET /api/spots`.

@@ -1,6 +1,7 @@
 package dev.plogging.glasses
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.view.WindowInsets
@@ -26,6 +27,7 @@ class MainActivity : ComponentActivity() {
   private val bluetooth =
       registerForActivityResult(RequestPermission()) { granted ->
         viewModel.onBluetoothPermission(granted)
+        if (granted) viewModel.acceptMetaLink(this, intent)
       }
 
   private var phoneCameraWaiting: CancellableContinuation<Boolean>? = null
@@ -74,7 +76,18 @@ class MainActivity : ComponentActivity() {
     }
 
     // The glasses talk over Bluetooth: Android shows this as "Nearby devices".
-    bluetooth.launch(Manifest.permission.BLUETOOTH_CONNECT)
+    if (hasBluetooth()) {
+      viewModel.onBluetoothPermission(true)
+      viewModel.acceptMetaLink(this, intent)
+    } else {
+      bluetooth.launch(Manifest.permission.BLUETOOTH_CONNECT)
+    }
+  }
+
+  override fun onNewIntent(intent: Intent) {
+    super.onNewIntent(intent)
+    setIntent(intent)
+    viewModel.acceptMetaLink(this, intent)
   }
 
   override fun onWindowFocusChanged(hasFocus: Boolean) {
@@ -89,6 +102,10 @@ class MainActivity : ComponentActivity() {
       controller.hide(WindowInsets.Type.systemBars())
     }
   }
+
+  private fun hasBluetooth(): Boolean =
+      ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) ==
+          PackageManager.PERMISSION_GRANTED
 
   /** Asks Android for the camera of this phone. Returns whether it is allowed. */
   private suspend fun requestPhoneCamera(): Boolean {

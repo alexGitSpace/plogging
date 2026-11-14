@@ -2,6 +2,7 @@ package dev.plogging.glasses
 
 import android.app.Activity
 import android.app.Application
+import android.content.Intent
 import android.graphics.Bitmap
 import android.media.AudioManager
 import android.media.ToneGenerator
@@ -139,18 +140,25 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
   /** The glasses need Bluetooth. Call with the user's answer to the Android permission prompt. */
   fun onBluetoothPermission(granted: Boolean) {
-    if (!granted || glassesReady) return
+    if (granted) ensureGlasses()
+  }
+
+  /** Starts the Meta SDK if Bluetooth is allowed. Returns whether it is ready. */
+  fun ensureGlasses(): Boolean {
+    if (glassesReady) return true
     val error = glasses.initialize()
     if (error != null) {
       _uiState.update { it.copy(errorMessage = error) }
-      return
+      return false
     }
     glassesReady = true
+    _uiState.update { it.copy(glassesRegistered = glasses.isRegistered()) }
     viewModelScope.launch {
       glasses.registered.collect { registered ->
         _uiState.update { it.copy(glassesRegistered = registered) }
       }
     }
+    return true
   }
 
   fun select(kind: SourceKind) {
@@ -303,12 +311,17 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
   /** Opens the Meta AI app to register this app with the glasses. */
   fun connectGlasses(activity: Activity) {
-    if (glassesReady) glasses.register(activity)
+    if (ensureGlasses()) glasses.register(activity)
   }
 
   fun disconnectGlasses(activity: Activity) {
     stop()
-    if (glassesReady) glasses.unregister(activity)
+    if (ensureGlasses()) glasses.unregister(activity)
+  }
+
+  /** Meta AI returns through the `ploggingglasses` link after Connect glasses. */
+  fun acceptMetaLink(activity: Activity, intent: Intent) {
+    if (ensureGlasses()) glasses.handleIncoming(activity, intent)
   }
 
   fun dismissError() {
@@ -327,7 +340,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
   /** Runs on a background thread, one frame at a time. The hand skeleton is updated elsewhere. */
   private fun detect(frame: Bitmap, detector: ObjectDetector) {
     val startedAt = System.nanoTime()
-    val detections = detector.detect(frame)
+    val detections = detector.detect(frame).filter { it.countsAsLitter() }
     showOnGlasses(frame, detections)
     val now = System.nanoTime()
 

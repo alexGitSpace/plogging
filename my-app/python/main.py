@@ -1,3 +1,5 @@
+import queue
+import threading
 import time
 import urllib.request
 from pathlib import Path
@@ -8,7 +10,7 @@ from arduino.app_utils import App, Bridge
 from arduino.app_utils.image import compress_to_jpeg
 
 _URL = "https://httpbin.org/get"
-_TIMEOUT_S = 10
+_DEADLINE_S = 5  # a long press not fully reported this long after it arrived is dropped
 _FLUSH_READS = 5  # reads per photo; the first ones return frames buffered earlier
 _MIN_CONFIDENCE = 0.05  # labels below this share (0..1) are not worth printing
 _TOP_LABELS = 3
@@ -16,18 +18,36 @@ _PHOTO_DIR = Path(__file__).resolve().parent.parent / "photos"  # <app folder>/p
 
 _camera = Camera(resolution=(640, 480))
 _classifier = ImageClassification()
+_presses: queue.Queue[tuple[int, float]] = queue.Queue()  # (press number, arrival time)
 
 
-def _report_web_request(count: int):
+def _log(message: str):
+    """Log with the wall-clock time so lines can be matched to presses and photo names."""
+    stamp = time.strftime("%Y-%m-%d %H:%M:%S")
+    print(f"{stamp} {message}", flush=True)
+
+
+def _fetch_outcome(timeout: float) -> str:
+    """Fetch the URL and describe how it went, as the log needs words for success and failure alike."""
+    try:
+        with urllib.request.urlopen(_URL, timeout=timeout) as response:
+            return f"OK, HTTP {response.status}"
+    except OSError as error:  # URLError, HTTPError and timeouts are all OSErrors
+        return f"FAILED, {error}"
+
+
+def _report_web_request(count: int, timeout: float):
     """Report a web request per long press so the logs prove the board is online."""
     start = time.monotonic()
+    outcomes: queue.Queue[str] = queue.Queue()
+    # urlopen's own timeout is per network step and can add up, so wait on a thread instead.
+    threading.Thread(target=lambda: outcomes.put(_fetch_outcome(timeout)), daemon=True).start()
     try:
-        with urllib.request.urlopen(_URL, timeout=_TIMEOUT_S) as response:
-            outcome = f"OK, HTTP {response.status}"
-    except OSError as error:  # URLError, HTTPError and timeouts are all OSErrors
-        outcome = f"FAILED, {error}"
+        outcome = outcomes.get(timeout=timeout)
+    except queue.Empty:
+        outcome = "FAILED, no answer before the deadline"
     elapsed = time.monotonic() - start
-    print(f"long press {count}: GET {_URL} -> {outcome} ({elapsed:.1f} s)", flush=True)
+    _log(f"long press {count}: GET {_URL} -> {outcome} ({elapsed:.1f} s)")
 
 
 def _capture_fresh_jpeg() -> bytes | None:
@@ -67,17 +87,35 @@ def _report_classification(count: int):
         outcome = ", ".join(f"{label['class_name']} {float(label['confidence']):.0f} %" for label in labels)
     elapsed = time.monotonic() - start
     photo = _save_photo(jpeg, count) if jpeg else "no photo"
-    print(f"long press {count}: camera sees -> {outcome} ({elapsed:.1f} s) [{photo}]", flush=True)
+    _log(f"long press {count}: camera sees -> {outcome} ({elapsed:.1f} s) [{photo}]")
 
 
-def _report_long_press(count: int):
-    """Report each long press twice: the web request first, as it works without a camera."""
-    _report_web_request(count)
-    _report_classification(count)
+def _queue_long_press(count: int):
+    """Queue each long press with its arrival time, so a late one can be told apart and dropped."""
+    arrived = time.monotonic()
+    _presses.put((count, arrived))
 
 
-Bridge.provide("long_press", _report_long_press)
+def _report_next_long_press():
+    """Report the next queued long press, dropping whatever cannot start before its deadline."""
+    try:
+        count, arrived = _presses.get(timeout=1)
+    except queue.Empty:
+        return
+    deadline = arrived + _DEADLINE_S
+    if time.monotonic() >= deadline:
+        _log(f"long press {count}: DROPPED, waited more than {_DEADLINE_S} s for the previous one")
+        return
+    _report_classification(count)  # photo first, so it shows the scene at the press
+    remaining = deadline - time.monotonic()
+    if remaining <= 0:
+        _log(f"long press {count}: web request DROPPED, the {_DEADLINE_S} s were used up")
+        return
+    _report_web_request(count, timeout=remaining)
+
+
+Bridge.provide("long_press", _queue_long_press)
 
 _camera.start()
-print("Hello from Linux! Waiting for long presses.", flush=True)
-App.run()
+_log("Hello from Linux! Waiting for long presses.")
+App.run(user_loop=_report_next_long_press)

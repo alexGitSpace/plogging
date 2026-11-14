@@ -116,7 +116,7 @@ class GlassesSource(private val context: Context) {
       onStatus("Connecting to the glasses…")
       val opened = Wearables.createSession(selector).orThrow()
       session = opened
-      launch { opened.errors.collect { onError(it.description) } }
+      launch { opened.errors.collect { onError(it.userMessage()) } }
       opened.start()
       val state =
           opened.state.first {
@@ -145,7 +145,7 @@ class GlassesSource(private val context: Context) {
       launch(Dispatchers.Default) {
         added.stream.videoStream.collect { frame -> frame.toBitmap()?.let(onFrame) }
       }
-      launch { added.stream.errorStream.collect { onError(it.description) } }
+      launch { added.stream.errorStream.collect { onError(it.userMessage()) } }
 
       onStatus("Starting the camera…")
       added.stream.start().orThrow()
@@ -197,8 +197,17 @@ class GlassesSource(private val context: Context) {
   private fun <T, E : DatError> DatResult<T, E>.orThrow(): T =
       fold(
           onSuccess = { it },
-          onFailure = { error, _ -> throw GlassesException(error.description) },
+          onFailure = { error, _ -> throw GlassesException(error.userMessage()) },
       )
+}
+
+private fun DatError.userMessage(): String {
+  val raw = description
+  return when {
+    "DEVICE_UNAVAILABLE" in raw ->
+        "The glasses are not available. Unfold them, put them on, and tap Start."
+    else -> raw
+  }
 }
 
 /**

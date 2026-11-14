@@ -22,7 +22,7 @@ You need a Mac with Python 3, and Xcode 26.4 or newer for iOS or a JDK 17 or new
 glasses/scripts/setup.sh
 ```
 
-It makes the files that are not in git: the pre-trained YOLO11n (80 everyday classes such as `bottle` and `cup`) as `App/Resources/Detector.mlpackage` for iOS and `android/app/src/main/assets/detector.onnx` for Android, and `demo.mp4` (three bottles on a table) for both.
+It makes the files that are not in git: TACO YOLO11s (litter classes such as `Bottle`, `Can`, `Cigarette` and `Plastic bag & wrapper`) as `App/Resources/Detector.mlpackage` for iOS and `android/app/src/main/assets/detector.onnx` for Android, and `demo.mp4` (three bottles on a table) for both. The weights stay out of git: `setup.sh` downloads them from Hugging Face.
 
 ## Sources
 

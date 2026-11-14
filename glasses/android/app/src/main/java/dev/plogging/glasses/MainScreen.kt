@@ -32,7 +32,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -80,11 +79,6 @@ fun MainScreen(
   val frame by viewModel.frame.collectAsStateWithLifecycle()
   var menuOpen by remember { mutableStateOf(false) }
   BackHandler(enabled = menuOpen) { menuOpen = false }
-  LaunchedEffect(state.glassesRegistered, state.sourceKind) {
-    if (state.glassesRegistered && state.sourceKind == SourceKind.GLASSES && !state.isRunning) {
-      onStart()
-    }
-  }
 
   BoxWithConstraints(modifier = Modifier.fillMaxSize().background(Night)) {
     val landscape = maxWidth > maxHeight

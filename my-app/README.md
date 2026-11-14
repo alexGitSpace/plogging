@@ -5,7 +5,7 @@ green twice (200 ms on / 200 ms off). It fires once per press: release the
 button before the next long press. On each long press the sketch
 (`sketch/sketch.ino`) also notifies the Linux side (`python/main.py`), which
 takes a photo with the USB camera, classifies it on the board and, when the
-most confident label reaches 30 %, sends a `pick` event to the API
+most confident label reaches 10 %, sends a `pick` event to the API
 ([contract](../contract/README.md)). It prints both outcomes.
 
 The blink does not depend on Linux: it comes at once, even offline or
@@ -150,10 +150,10 @@ Each long press prints two lines, each starting with the board's date and
 time (the same clock as in the photo names):
 
 ```
-2026-11-14 15:30:12 long press 1: camera sees -> water bottle 71 %, carton 12 %, pop bottle 9 % (0.9 s) [photos/20261114-153012-press1.jpg]
+2026-11-14 15:30:12 long press 1: camera sees -> water bottle 71 %, carton 12 % (0.9 s) [photos/20261114-153012-press1.jpg]
 2026-11-14 15:30:13 long press 1: pick of water bottle -> OK, accepted (0.5 s)
-2026-11-14 15:31:40 long press 2: camera sees -> carton 12 %, pop bottle 9 % (0.9 s) [photos/20261114-153140-press2.jpg]
-2026-11-14 15:31:40 long press 2: no pick sent, nothing above 30 %
+2026-11-14 15:31:40 long press 2: camera sees -> nothing above 10 % (0.9 s) [photos/20261114-153140-press2.jpg]
+2026-11-14 15:31:40 long press 2: no pick sent, nothing above 10 %
 2026-11-14 15:32:05 long press 3: camera sees -> pop bottle 64 % (0.9 s) [photos/20261114-153205-press3.jpg]
 2026-11-14 15:32:09 long press 3: pick of pop bottle -> FAILED, no answer before the deadline (4.1 s)
 2026-11-14 15:32:11 long press 4: DROPPED, waited more than 5 s for the previous one
@@ -163,14 +163,14 @@ A long press gets 5 s from the moment it reaches Linux. The request is
 cut off when they run out, and a press that waited the whole 5 s behind an
 earlier one is dropped without a photo or a request.
 
-A pick is sent only when the most confident label reaches 30 %
+A pick is sent only when the most confident label reaches 10 %
 (`_PICK_CONFIDENCE` in `python/main.py`). The event is the contract's
 `pick`: its `t` is the moment the press reached Linux, and it carries no
 label, as the contract has no field for one. A pick that fails is not
 resent.
 
 The camera line lists the model's three most confident labels. `nothing
-above 5 %` means it recognised nothing; `FAILED` means the camera gave no
+above 10 %` means it recognised nothing; `FAILED` means the camera gave no
 picture or the classification service did not answer.
 
 ### Inspecting the photos

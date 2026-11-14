@@ -15,9 +15,9 @@ from arduino.app_utils.image import compress_to_jpeg
 _DEVICE_ID = "grabber-1"  # as in contract/README.md
 _DEADLINE_S = 5  # a long press not fully reported this long after it arrived is dropped
 _FLUSH_READS = 5  # reads per photo; the first ones return frames buffered earlier
-_MIN_CONFIDENCE = 0.05  # labels below this share (0..1) are not worth printing
+_MIN_CONFIDENCE = 0.10  # labels below this share (0..1) are not worth printing
 _TOP_LABELS = 3
-_PICK_CONFIDENCE = 30  # per cent, as the classifier reports it; a top label below this sends no pick
+_PICK_CONFIDENCE = 10  # per cent, as the classifier reports it; a top label below this sends no pick
 _APP_DIR = Path(__file__).resolve().parent.parent
 _PHOTO_DIR = _APP_DIR / "photos"
 

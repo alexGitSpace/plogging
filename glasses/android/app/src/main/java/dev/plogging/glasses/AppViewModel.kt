@@ -6,17 +6,21 @@ import android.graphics.Bitmap
 import android.media.AudioManager
 import android.media.ToneGenerator
 import android.net.Uri
+import android.os.SystemClock
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import java.util.concurrent.atomic.AtomicReference
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -76,6 +80,14 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
   val frame: StateFlow<Bitmap?> = _frame.asStateFlow()
 
   private val glasses = GlassesSource(application)
+
+  /** What the display of the glasses is doing, and a view of it when the glasses are simulated. */
+  val displayStatus = glasses.displayStatus
+  val displayPreview = glasses.displayPreview
+  private var spotter = Spotter()
+  private var spot: Spot? = null
+  private var displayCard: DisplayCard? = null
+
   private val location = PhoneLocation(application)
   private val reporter = SightingReporter(application)
   private var glassesReady = false
@@ -112,6 +124,12 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
           onBufferOverflow = BufferOverflow.DROP_OLDEST,
       )
 
+  /** The hand model runs on its own frames, so the skeleton is not waiting on litter detection. */
+  private val handSlot = AtomicReference<Bitmap?>(null)
+  private val handReady = Channel<Unit>(Channel.CONFLATED)
+  @Volatile private var latestHands: List<HandPose> = emptyList()
+  @Volatile private var latestDetections: List<Detection> = emptyList()
+
   // MARK: Actions
 
   /** The glasses need Bluetooth. Call with the user's answer to the Android permission prompt. */
@@ -147,6 +165,10 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     if (_uiState.value.isRunning) return
     val kind = _uiState.value.sourceKind
     pickDetector = PickDetector()
+    spotter = Spotter()
+    latestHands = emptyList()
+    latestDetections = emptyList()
+    handSlot.getAndSet(null)?.recycle()
     _uiState.update {
       it.copy(
           isRunning = true,
@@ -162,17 +184,22 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     run = viewModelScope.launch {
       var endStatus = "Stopped"
       var detecting: Job? = null
+      var tracking: Job? = null
       try {
         val detector = loadDetector()
         val tracker = loadHands()
         requestLocation()
         location.start()
         reporter.beginSession()
-        detecting = launch(Dispatchers.Default) { pendingFrames.collect { detect(it, detector, tracker) } }
+        _uiState.update { it.copy(handTracking = tracker.available) }
+        detecting = launch(Dispatchers.Default) { pendingFrames.collect { detect(it, detector) } }
+        tracking = launch(Dispatchers.Default) { trackHands(tracker) }
 
         val onFrame: (Bitmap) -> Unit = { frame ->
           _frame.value = frame
           pendingFrames.tryEmit(frame)
+          handSlot.getAndSet(HandTracker.scaled(frame))?.recycle()
+          handReady.trySend(Unit)
         }
 
         if (kind == SourceKind.VIDEO_FILE) {
@@ -211,6 +238,11 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.update { it.copy(errorMessage = e.message ?: e.toString()) }
       } finally {
         detecting?.cancel()
+        withContext(NonCancellable) {
+          tracking?.cancel()
+          tracking?.join()
+        }
+        handSlot.getAndSet(null)?.recycle()
         location.stop()
         reporter.endSession()
         _frame.value = null
@@ -255,19 +287,20 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
   private val resultTimes = ArrayDeque<Long>()
 
-  /** Runs on a background thread, one frame at a time. */
-  private fun detect(frame: Bitmap, detector: ObjectDetector, tracker: HandTracker) {
+  /** Runs on a background thread, one frame at a time. The hand skeleton is updated elsewhere. */
+  private fun detect(frame: Bitmap, detector: ObjectDetector) {
     val startedAt = System.nanoTime()
     val detections = detector.detect(frame)
-    val hands = tracker.detect(frame)
+    showOnGlasses(frame, detections)
     val now = System.nanoTime()
 
     resultTimes.addLast(now)
     while (now - resultTimes.first() > 1_000_000_000L) resultTimes.removeFirst()
 
+    latestDetections = detections
     val seenAt = System.currentTimeMillis()
     reporter.note(detections, location.fix.value, seenAt)
-    val pick = pickDetector.onFrame(detections, hands, seenAt)
+    val pick = pickDetector.onFrame(detections, latestHands, seenAt)
 
     _uiState.update {
       if (!it.isRunning) return@update it
@@ -277,11 +310,34 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
           inferenceMilliseconds = (now - startedAt) / 1_000_000f,
           picks = if (pick != null) it.picks + 1 else it.picks,
           lastPick = pick ?: it.lastPick,
-          hands = hands,
-          handTracking = tracker.available,
       )
     }
     if (pick != null) playPickTone()
+  }
+
+  private suspend fun trackHands(tracker: HandTracker) {
+    while (true) {
+      handReady.receive()
+      val small = handSlot.getAndSet(null) ?: continue
+      val hands =
+          try {
+            tracker.detect(small)
+          } finally {
+            small.recycle()
+          }
+      latestHands = hands
+      val pick = pickDetector.onFrame(latestDetections, hands, System.currentTimeMillis())
+      _uiState.update {
+        if (!it.isRunning) return@update it
+        it.copy(
+            hands = hands,
+            handTracking = tracker.available,
+            picks = if (pick != null) it.picks + 1 else it.picks,
+            lastPick = pick ?: it.lastPick,
+        )
+      }
+      if (pick != null) playPickTone()
+    }
   }
 
   private fun onMotion(reading: MotionReading) {
@@ -295,6 +351,20 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
       )
     }
     if (pick != null) playPickTone()
+  }
+
+  /**
+   * Points out one piece of litter on the display of the glasses. The picture on its card is
+   * cut from the frame the spot was found in, so the card is drawn only when the spot is new,
+   * and before anything else is handed the frame.
+   */
+  private fun showOnGlasses(frame: Bitmap, detections: List<Detection>) {
+    val spotted = spotter.onDetections(detections, SystemClock.elapsedRealtime())
+    if (spotted !== spot) {
+      spot = spotted
+      displayCard = spotted?.let { DisplayCard.of(it, frame) }
+    }
+    glasses.show(displayCard)
   }
 
   private fun playPickTone() {

@@ -4,6 +4,8 @@ import android.app.Activity
 import android.content.Context
 import android.graphics.Bitmap
 import android.net.Uri
+import android.os.SystemClock
+import android.view.View
 import androidx.activity.ComponentActivity
 import com.meta.wearable.dat.camera.Camera
 import com.meta.wearable.dat.camera.addCamera
@@ -23,6 +25,15 @@ import com.meta.wearable.dat.core.types.HingeState
 import com.meta.wearable.dat.core.types.Permission
 import com.meta.wearable.dat.core.types.PermissionStatus
 import com.meta.wearable.dat.core.types.RegistrationState
+import com.meta.wearable.dat.display.Display
+import com.meta.wearable.dat.display.addDisplay
+import com.meta.wearable.dat.display.types.DisplayState
+import com.meta.wearable.dat.display.views.Alignment
+import com.meta.wearable.dat.display.views.CornerRadius
+import com.meta.wearable.dat.display.views.Direction
+import com.meta.wearable.dat.display.views.FlexBoxBackground
+import com.meta.wearable.dat.display.views.IconName
+import com.meta.wearable.dat.display.views.TextStyle
 import com.meta.wearable.dat.mockdevice.MockDeviceKit
 import com.meta.wearable.dat.mockdevice.api.GlassesModel
 import com.meta.wearable.dat.mockdevice.api.MockDeviceKitConfig
@@ -35,19 +46,26 @@ import com.meta.wearable.dat.motion.types.MotionSamplingRate
 import java.nio.ByteBuffer
 import kotlin.coroutines.resume
 import kotlinx.coroutines.CancellableContinuation
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
- * The camera of the Meta glasses, through the Meta Wearables Device Access Toolkit.
+ * The camera and the display of the Meta glasses, through the Meta Wearables Device Access
+ * Toolkit.
  *
  * This is the only file that talks to the Meta SDK. It can also pair simulated glasses (the
  * SDK's MockDeviceKit), which go through exactly the same session and stream code as real ones.
@@ -66,6 +84,23 @@ class GlassesSource(private val context: Context) {
   }
 
   class GlassesException(message: String) : Exception(message)
+
+  private companion object {
+    /** The least time between two cards on the display. */
+    const val DISPLAY_INTERVAL_MS = 1_000L
+
+    /** How often to look for a new card while there is none. */
+    const val DISPLAY_POLL_MS = 100L
+
+    /** A card that is not repeated for this long gives way to the looking card. */
+    const val STALE_MS = 2_000L
+
+    /** Simulated glasses answer within milliseconds. */
+    const val SIMULATED_ANSWER_MS = 1_000L
+
+    const val DISPLAY_ATTEMPTS = 5
+    const val DISPLAY_RETRY_MS = 1_000L
+  }
 
   private var mockEnabled = false
 
@@ -183,6 +218,9 @@ class GlassesSource(private val context: Context) {
       onStatus("Starting the camera…")
       added.stream.start().orThrow()
 
+      // The display is an extra: whatever goes wrong with it, the camera goes on.
+      launch(Dispatchers.IO) { runDisplay(opened, simulated = feed != Feed.Glasses) }
+
       // 5. Follow the stream until it ends. A stream that has not started yet also
       //    reports STOPPED: that is not the end.
       var hasStarted = false
@@ -204,7 +242,11 @@ class GlassesSource(private val context: Context) {
     } finally {
       motion?.stop()
       camera?.stop()
+      // Stopping the session also takes the card off the display.
       session?.stop()
+      card = null
+      _displayStatus.value = null
+      _displayPreview.value = null
       if (mockEnabled) {
         mockEnabled = false
         // Back to real glasses: the mock kit replaces them while it is enabled.
@@ -213,7 +255,122 @@ class GlassesSource(private val context: Context) {
     }
   }
 
+  // MARK: Display
+
+  private val _displayStatus = MutableStateFlow<String?>(null)
+
+  /** What the display of the glasses is doing, in a few words. Null while nothing streams. */
+  val displayStatus: StateFlow<String?> = _displayStatus.asStateFlow()
+
+  private val _displayPreview = MutableStateFlow<((Context) -> View)?>(null)
+
+  /**
+   * Makes a view of what the display shows. Only simulated glasses have one: real glasses
+   * do not send their screen back.
+   */
+  val displayPreview: StateFlow<((Context) -> View)?> = _displayPreview.asStateFlow()
+
+  @Volatile private var card: DisplayCard? = null
+  @Volatile private var cardAt = 0L
+
+  /**
+   * Puts [card] on the display of the glasses while they stream. Null, or a card that is not
+   * repeated for [STALE_MS], leaves the looking card up: the display stays filled for the
+   * whole session.
+   */
+  fun show(card: DisplayCard?) {
+    this.card = card
+    cardAt = SystemClock.elapsedRealtime()
+  }
+
   // MARK: Private
+
+  /**
+   * Keeps the display showing the latest card until the caller is cancelled. Every send
+   * replaces the whole screen and crosses Bluetooth, so cards go one at a time with a pause
+   * between them, and only when there is a new one.
+   */
+  private suspend fun runDisplay(session: DeviceSession, simulated: Boolean) {
+    try {
+      _displayStatus.value = "Starting the display…"
+      val display = attachDisplay(session) ?: return
+      display.state.first { it == DisplayState.STARTED }
+
+      // The display stays filled until the session ends. With nothing spotted, it shows the
+      // looking card instead of going blank.
+      var shown: DisplayCard? = null
+      while (true) {
+        val fresh = card?.takeIf { SystemClock.elapsedRealtime() - cardAt < STALE_MS }
+        val wanted = fresh ?: DisplayCard.LOOKING
+        if (wanted === shown) {
+          delay(DISPLAY_POLL_MS)
+          continue
+        }
+        val error = display.send(wanted, simulated)
+        if (error == null) shown = wanted
+        reportDisplay(error)
+        delay(DISPLAY_INTERVAL_MS)
+      }
+    } catch (e: CancellationException) {
+      // The stream is over: leave no report behind, whatever was said a moment ago.
+      _displayStatus.value = null
+      throw e
+    } catch (e: Exception) {
+      reportDisplay(e.message ?: e.toString())
+    }
+  }
+
+  /** The glasses can refuse while they are still settling in: asks a few times. */
+  private suspend fun attachDisplay(session: DeviceSession): Display? {
+    repeat(DISPLAY_ATTEMPTS) { attempt ->
+      if (attempt > 0) delay(DISPLAY_RETRY_MS)
+      val result = session.addDisplay()
+      result.getOrNull()?.let { return it }
+      reportDisplay(result.errorOrNull()?.description)
+    }
+    return null
+  }
+
+  private fun reportDisplay(error: String?) {
+    _displayStatus.value = if (error == null) "Display on" else "Display: $error"
+  }
+
+  /** Returns what went wrong, or null if the glasses took the card. */
+  private suspend fun Display.send(card: DisplayCard, simulated: Boolean): String? =
+      try {
+        // Simulated glasses answer at once, now and then before the SDK starts to listen for
+        // the answer. It then waits five seconds for what has already come: do not wait with it.
+        val result =
+            if (simulated) withTimeoutOrNull(SIMULATED_ANSWER_MS) { put(card) } else put(card)
+        result?.errorOrNull()?.description
+      } catch (e: CancellationException) {
+        throw e
+      } catch (e: Exception) {
+        e.message ?: e.toString()
+      }
+
+  private suspend fun Display.put(card: DisplayCard) =
+      sendContent {
+        // Words first. The lens only shows the top of the display, and a picture above the
+        // words hides them: what is left looks like a small mark.
+        flexBox(gap = 12, padding = 24, background = FlexBoxBackground.CARD) {
+          text(card.title, style = TextStyle.HEADING)
+          flexBox(direction = Direction.ROW, gap = 8, crossAlignment = Alignment.CENTER) {
+            icon(card.sign.icon)
+            text(card.detail, style = TextStyle.BODY)
+          }
+          card.picture?.let { image(bitmap = it, cornerRadius = CornerRadius.MEDIUM) }
+        }
+      }
+
+  private val DisplayCard.Sign.icon: IconName
+    get() =
+        when (this) {
+          DisplayCard.Sign.LEFT -> IconName.ARROW_LEFT
+          DisplayCard.Sign.RIGHT -> IconName.ARROW_RIGHT
+          DisplayCard.Sign.AHEAD -> IconName.CARET_UP
+          DisplayCard.Sign.LOOKING -> IconName.EYE
+        }
 
   private fun pairMockGlasses(setFeed: (MockCameraKit) -> Unit) {
     val kit = MockDeviceKit.getInstance(context)
@@ -222,6 +379,7 @@ class GlassesSource(private val context: Context) {
     mockEnabled = true
     val glasses = kit.pairGlasses(GlassesModel.META_RAYBAN_DISPLAY).orThrow()
     setFeed(glasses.services.camera)
+    _displayPreview.value = glasses.services.display::createPreviewView
     // Glasses become available once they are on, unfolded and worn.
     glasses.powerOn()
     glasses.unfold()

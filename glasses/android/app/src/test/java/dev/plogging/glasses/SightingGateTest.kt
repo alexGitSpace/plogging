@@ -107,6 +107,13 @@ class SightingGateTest {
   }
 
   @Test
+  fun recogniseUrlSitsBesideEvents() {
+    assertEquals("$DEFAULT_API_URL/api/recognise", recogniseUrl(""))
+    assertEquals("http://10.0.2.2:8000/api/recognise", recogniseUrl("http://10.0.2.2:8000"))
+    assertEquals("http://10.0.2.2:8000/api/recognise", recogniseUrl("http://10.0.2.2:8000/api/events"))
+  }
+
+  @Test
   fun sightingJsonMatchesTheContract() {
     val json =
         SightingEvent(

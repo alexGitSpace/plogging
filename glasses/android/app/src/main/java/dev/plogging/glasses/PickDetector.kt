@@ -11,7 +11,7 @@ data class MotionReading(
     val z: Float,
 )
 
-data class Pick(val label: String, val t: Long)
+data class Pick(val label: String, val t: Long, val confidence: Float, val box: Detection? = null)
 
 data class HandPoint(val x: Float, val y: Float)
 
@@ -26,6 +26,25 @@ data class HandPose(val points: List<HandPoint>) {
   }
 
   fun belongsToWearer(): Boolean = palm() >= WEARER_PALM && wristY() >= WEARER_WRIST_Y
+
+  fun palmBox(): Detection {
+    if (points.isEmpty()) return Detection("other", 0f, 0.25f, 0.25f, 0.75f, 0.75f)
+    val pad = 0.12f
+    val xs = points.map { it.x }
+    val ys = points.map { it.y }
+    val minX = xs.minOrNull() ?: 0.4f
+    val maxX = xs.maxOrNull() ?: 0.6f
+    val minY = ys.minOrNull() ?: 0.4f
+    val maxY = ys.maxOrNull() ?: 0.6f
+    return Detection(
+        "other",
+        0f,
+        (minX - pad).coerceIn(0f, 1f),
+        (minY - pad).coerceIn(0f, 1f),
+        (maxX + pad).coerceIn(0f, 1f),
+        (maxY + pad).coerceIn(0f, 1f),
+    )
+  }
 
   fun curl(): Float {
     if (points.size <= MIDDLE_MCP) return OPEN_CURL
@@ -115,7 +134,7 @@ class PickDetector {
   private var bendStartedMs: Long? = null
   private var countedThisBend = false
   private var lastPickMs = Long.MIN_VALUE
-  private val recentLitter = ArrayDeque<Pair<Long, String>>()
+  private val recentLitter = ArrayDeque<Pair<Long, Detection>>()
   private var lastHandMs = Long.MIN_VALUE
   private var grab: Grab? = null
 
@@ -209,7 +228,7 @@ class PickDetector {
     pruneLitter(nowMs)
     val litter = detections.filter { it.countsAsLitter() }
     if (litter.isNotEmpty()) {
-      recentLitter.addLast(nowMs to litter.maxBy { it.confidence }.label)
+      recentLitter.addLast(nowMs to litter.maxBy { it.confidence })
     }
   }
 
@@ -219,7 +238,8 @@ class PickDetector {
     if (lastPickMs != Long.MIN_VALUE && nowMs - lastPickMs < PICK_COOLDOWN_MS) return null
     countedThisBend = true
     lastPickMs = nowMs
-    return Pick(recentLitter.last().second, nowMs)
+    val found = recentLitter.last().second
+    return Pick(found.label, nowMs, found.confidence, found)
   }
 
   private fun pruneLitter(nowMs: Long) {
@@ -297,7 +317,7 @@ class PickDetector {
     lastPickMs = nowMs
     current.taken = true
     grab = current
-    return Pick(current.label, nowMs)
+    return Pick(current.label, nowMs, current.box.confidence, current.box)
   }
 
   private class Grab(

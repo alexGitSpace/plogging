@@ -36,7 +36,7 @@ private constructor(
 
   companion object {
     const val MODEL_ASSET = "detector.onnx"
-    const val CONFIDENCE_THRESHOLD = 0.55f
+    const val CONFIDENCE_THRESHOLD = 0.25f
 
     fun load(context: Context, confidenceThreshold: Float = CONFIDENCE_THRESHOLD): ObjectDetector {
       val model =

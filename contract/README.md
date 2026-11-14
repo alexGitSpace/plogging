@@ -37,6 +37,21 @@ Every event has:
 
 Examples: [outing.json](examples/outing.json) is a short outing with every type; [pick.json](examples/pick.json) and [sighting.json](examples/sighting.json) are single events.
 
+## Recognising a crop
+
+When the glasses cannot name a pick, they send one JPEG. The API asks Gemini and returns a `litter_type`. The glasses then send a normal `sighting`. The JPEG is not stored.
+
+```http
+POST {API_URL}/api/recognise
+Content-Type: application/json
+
+{"image_jpeg_base64": "...", "hint": "Can", "hint_confidence": 0.41}
+```
+
+`hint` and `hint_confidence` are optional. The image must be a JPEG of at most 1 MB once decoded.
+
+`200 OK` with `{"litter_type": "wrapper", "confidence": 0.82}`. `litter_type` is the same set as on a `sighting`. `422` if the image is not a JPEG or is too large. `503` if `GEMINI_API_KEY` is not set. `502` if Gemini fails. After a `4xx` or `5xx`, keep the local label and do not send a sighting for that crop.
+
 ## Response
 
 `200 OK` with `{"accepted": ["<event_id>"], "rejected": [{"event_id": "<event_id>", "error": "..."}]}`.
@@ -61,5 +76,4 @@ curl "$API_URL/api/events?limit=20"   # the latest events, newest first
 ## Not decided yet
 
 - What the interface reads: outing card, stats, leaderboard.
-- Sending a camera frame so that the API recognises the litter type.
 - A `deposit` event from an Atech bag.

@@ -16,8 +16,12 @@ data class Detection(
 ) {
   fun countsAsLitter(): Boolean = label in NAMED_LITTER
 
-  private companion object {
-    val NAMED_LITTER =
+  fun isLiveLitter(): Boolean = countsAsLitter() && confidence >= LIVE_CONFIDENCE
+
+  companion object {
+    const val LIVE_CONFIDENCE = 0.55f
+
+    private val NAMED_LITTER =
         setOf(
             "Bottle",
             "Can",

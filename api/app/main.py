@@ -5,12 +5,22 @@ import time
 from pathlib import Path
 from typing import Annotated, Any
 
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 
 from app.events import parse_event
+from app.recognise import (
+    ClassifyFn,
+    GeminiError,
+    ImageError,
+    MissingKeyError,
+    RecogniseRequest,
+    RecogniseResult,
+    decode_jpeg,
+    gemini_classify,
+)
 from app.store import Store
 
 MAX_BATCH = 100
@@ -36,8 +46,9 @@ class EventList(BaseModel):
     events: list[dict[str, Any]]
 
 
-def create_app(db_path: str) -> FastAPI:
+def create_app(db_path: str, classify: ClassifyFn | None = None) -> FastAPI:
     store = Store(db_path)
+    run_classify = classify if classify is not None else gemini_classify
     app = FastAPI(title="plogging API", summary="Events format: contract/README.md in the repository")
     # Devices, the web app and the glasses web app may live on other origins. Nothing here needs cookies.
     app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["GET", "POST"], allow_headers=["*"])
@@ -60,6 +71,19 @@ def create_app(db_path: str) -> FastAPI:
     @app.get("/api/events")
     def get_events(limit: Annotated[int, Query(ge=1, le=1000)] = 20) -> EventList:
         return EventList(events=store.latest(limit))
+
+    @app.post("/api/recognise")
+    def post_recognise(body: RecogniseRequest) -> RecogniseResult:
+        try:
+            image = decode_jpeg(body.image_jpeg_base64)
+        except ImageError as e:
+            raise HTTPException(status_code=422, detail=str(e)) from e
+        try:
+            return run_classify(image, body.hint, body.hint_confidence)
+        except MissingKeyError as e:
+            raise HTTPException(status_code=503, detail=str(e)) from e
+        except GeminiError as e:
+            raise HTTPException(status_code=502, detail=str(e)) from e
 
     @app.get("/", response_class=HTMLResponse, include_in_schema=False)
     def page() -> str:

@@ -10,3 +10,12 @@ internal fun eventsUrl(raw: String): String {
   if (base.endsWith("/api/events")) return base
   return "$base/api/events"
 }
+
+internal fun recogniseUrl(raw: String): String {
+  val events = eventsUrl(raw)
+  return if (events.endsWith("/api/events")) {
+    events.removeSuffix("/api/events") + "/api/recognise"
+  } else {
+    "$events/api/recognise"
+  }
+}

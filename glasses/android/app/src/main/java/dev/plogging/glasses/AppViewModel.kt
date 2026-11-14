@@ -4,8 +4,6 @@ import android.app.Activity
 import android.app.Application
 import android.content.Intent
 import android.graphics.Bitmap
-import android.media.AudioManager
-import android.media.ToneGenerator
 import android.net.Uri
 import android.os.SystemClock
 import androidx.lifecycle.AndroidViewModel
@@ -66,6 +64,7 @@ data class UiState(
     val handTracking: Boolean = false,
     val isRecording: Boolean = false,
     val recordingMessage: String? = null,
+    val voiceLine: String? = null,
 ) {
   /** Glasses mode needs the app to be registered with the Meta AI app first. */
   val needsRegistration: Boolean
@@ -99,7 +98,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
   private var detector: ObjectDetector? = null
   private var pickDetector = PickDetector()
   private var handTracker: HandTracker? = null
-  private var tone: ToneGenerator? = null
+  private val voice = CalmVoice(application) { line -> _uiState.update { it.copy(voiceLine = line) } }
   private var run: Job? = null
 
   init {
@@ -191,6 +190,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
           lastPick = null,
           tiltDegrees = null,
           hands = emptyList(),
+          voiceLine = null,
       )
     }
 
@@ -199,6 +199,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
       var detecting: Job? = null
       var tracking: Job? = null
       try {
+        voice.begin(this)
         val detector = loadDetector()
         val tracker = loadHands()
         requestLocation()
@@ -255,6 +256,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         withContext(NonCancellable) {
           tracking?.cancel()
           tracking?.join()
+          voice.end()
         }
         handSlot.getAndSet(null)?.recycle()
         val saved =
@@ -277,6 +279,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
               hands = emptyList(),
               isRecording = false,
               recordingMessage = saved?.let { "Saved Movies/Plogging/$it" } ?: recorder.failure,
+              voiceLine = null,
           )
         }
       }
@@ -362,7 +365,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
           lastPick = pick ?: it.lastPick,
       )
     }
-    if (pick != null) playPickTone()
+    if (pick != null) voice.onPick(pick.label)
   }
 
   private suspend fun trackHands(tracker: HandTracker) {
@@ -393,7 +396,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             lastPick = pick ?: it.lastPick,
         )
       }
-      if (pick != null) playPickTone()
+      if (pick != null) voice.onPick(pick.label)
     }
   }
 
@@ -407,7 +410,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
           lastPick = pick ?: it.lastPick,
       )
     }
-    if (pick != null) playPickTone()
+    if (pick != null) voice.onPick(pick.label)
   }
 
   /**
@@ -422,13 +425,6 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
       displayCard = spotted?.let { DisplayCard.of(it, frame) }
     }
     glasses.show(displayCard)
-  }
-
-  private fun playPickTone() {
-    try {
-      val generator = tone ?: ToneGenerator(AudioManager.STREAM_NOTIFICATION, 80).also { tone = it }
-      generator.startTone(ToneGenerator.TONE_PROP_ACK, 180)
-    } catch (_: RuntimeException) {}
   }
 
   private suspend fun loadHands(): HandTracker =
@@ -452,7 +448,6 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     detector?.close()
     handTracker?.close()
     handTracker = null
-    tone?.release()
-    tone = null
+    voice.end()
   }
 }

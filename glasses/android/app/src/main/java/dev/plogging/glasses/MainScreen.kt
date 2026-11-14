@@ -128,6 +128,7 @@ fun MainScreen(
         Text(message, color = Leaf, fontSize = 12.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(top = 6.dp))
       }
       PickBanner(state.lastPick)
+      VoiceBanner(state.voiceLine)
       displayStatus?.let { GlassesDisplay(it, displayPreview, Modifier.padding(top = 10.dp)) }
       Spacer(Modifier.weight(1f))
       if (landscape) {
@@ -324,6 +325,33 @@ private fun PickBanner(lastPick: Pick?) {
         fontWeight = FontWeight.Bold,
         modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
     )
+  }
+}
+
+@Composable
+private fun VoiceBanner(line: String?) {
+  if (line.isNullOrBlank()) return
+  Surface(
+      modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
+      color = NightSurface,
+      shape = RoundedCornerShape(14.dp),
+      border = androidx.compose.foundation.BorderStroke(1.dp, Leaf.copy(alpha = 0.35f)),
+  ) {
+    Column(Modifier.padding(horizontal = 16.dp, vertical = 10.dp)) {
+      Text(
+          "VOICE",
+          color = Leaf,
+          fontSize = 9.sp,
+          fontWeight = FontWeight.Bold,
+          letterSpacing = 1.2.sp,
+      )
+      Text(
+          line,
+          color = Mist,
+          fontSize = 15.sp,
+          fontWeight = FontWeight.Medium,
+      )
+    }
   }
 }
 

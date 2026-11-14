@@ -1,15 +1,15 @@
 # Architecture
 
-Draft for scoping the work. Status as of Saturday 14 November 2026, evening.
+How Plokka is built. Status as of Sunday 15 November 2026, before the submission.
 
 ```mermaid
 flowchart LR
   grabber[Grabber<br/>Arduino UNO Q] -- pick --> api
   glasses[Glasses app<br/>Meta glasses + phone] -- sighting --> api
-  recorder[Outing recorder<br/>phone GPS] -- session, track --> api
-  api[API<br/>events, outings, spots, zones] --> db[(SQLite)]
+  web[Web app<br/>map, outing recorder,<br/>feed, quests, leaderboard] -- session, track --> api
+  api[API<br/>events, outings, spots] --> db[(SQLite)]
   api -- spots --> glasses
-  api --> web[Web app<br/>map, outings, leaderboard]
+  api -- outings, spots, leaderboard --> web
 ```
 
 Every part talks only to the API. The events and the read endpoints are in the [contract](contract/README.md).
@@ -21,17 +21,17 @@ Every part talks only to the API. The events and the read endpoints are in the [
 | Contract | `contract/` | Event format and read endpoints | Done |
 | API | `api/` | Stores events; builds outings, spots and the leaderboard on every read | Done, deployed |
 | Simulator | `api/sim.py` | Sends made-up or recorded outings, for the demo without hardware | Done |
-| Grabber | `grabber/` | Recognises a pick and sends `pick` | Nothing pushed yet |
-| Glasses app | `glasses/` | Streams the glasses camera to the phone, runs YOLO, sends `sighting` with the phone's location | PR #1 (iOS) and #2 (Android): detection on screen, no sending yet |
-| Outing recorder | `api/` (`/record`) | A phone web page: starts and ends the outing, sends the GPS track | Done, try it on a real walk |
-| Web app | `web/` | Map, outings, stats, leaderboard, live screen | Shell done: router, API client, maps; screens are placeholders |
+| Grabber | `grabber/` | Recognises the picked item by camera and sends `pick` | Sends `pick` to the API |
+| Glasses app | `glasses/` | Streams the glasses camera to the phone, runs YOLO, sends `sighting` with the phone's location | Android: sends `sighting`, shows litter on the Meta Ray-Ban Display. iOS: detection on screen, no sending |
+| Outing recorder | `web/` (`js/recorder.js`) | Records the outing on the map, like Strava: start, pause, finish, the GPS track | Done. The API's `/record` page is the older fallback |
+| Web app | `web/` | Map, outings, stats, quests, leaderboard, profile | Done, deployed |
 | Zones | `api/` | Pollution by area on the map: low, medium, high | Not started |
 
 ### Web app: front end and back end
 
 The API is the back end of the web app; no second server. Points, quests and streaks are computed in the front end from what the API returns, as the contract says. Users are nicknames in `user_id`, no accounts.
 
-Desktop first, no mobile layout for now.
+Works on desktop and on the phone: below 760 px the sidebar becomes a bottom bar.
 
 ### Where a pick is
 

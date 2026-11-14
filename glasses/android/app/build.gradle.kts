@@ -1,3 +1,4 @@
+import java.util.Properties
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
@@ -27,9 +28,15 @@ android {
         providers.gradleProperty("mwdat_application_id").getOrElse("0")
     manifestPlaceholders["mwdat_client_token"] =
         providers.gradleProperty("mwdat_client_token").getOrElse("0")
+
+    val elevenLabsKey = elevenLabsApiKey()
+    buildConfigField("String", "ELEVENLABS_API_KEY", elevenLabsKey.toBuildConfigString())
   }
 
-  buildFeatures { compose = true }
+  buildFeatures {
+    compose = true
+    buildConfig = true
+  }
 
   compileOptions {
     sourceCompatibility = JavaVersion.VERSION_17
@@ -58,4 +65,19 @@ dependencies {
   implementation(libs.onnxruntime.android)
   implementation(libs.mediapipe.tasks.vision)
   testImplementation(libs.junit)
+}
+
+private fun elevenLabsApiKey(): String {
+  val fromEnv = System.getenv("ELEVENLABS_API_KEY")?.trim().orEmpty()
+  if (fromEnv.isNotEmpty()) return fromEnv
+  val properties = Properties()
+  val file = rootProject.file("local.properties")
+  if (file.exists()) file.inputStream().use { properties.load(it) }
+  return properties.getProperty("elevenlabs.api.key")?.trim().orEmpty()
+}
+
+private fun String.toBuildConfigString(): String {
+  val escaped =
+      replace("\\", "\\\\").replace("\"", "\\\"").replace("\$", "\\\$").replace("\n", "\\n")
+  return "\"$escaped\""
 }

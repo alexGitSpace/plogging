@@ -33,6 +33,10 @@ The API is the back end of the web app; no second server. Points, quests and str
 
 Desktop first, no mobile layout for now.
 
+### Where a pick is
+
+The grabber has no GPS. The API puts each pick on the route of the outing by time, so a pick is as accurate as the phone's GPS, about 5–15 m. For that, the grabber's clock must be in sync, and the grabber must be in the outing's `device_ids`.
+
 ### Zones
 
 Show pollution by area instead of single objects:

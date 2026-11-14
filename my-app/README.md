@@ -4,8 +4,8 @@ Hold the button for more than 1 second and the on-board RGB LED 3 blinks
 green twice (200 ms on / 200 ms off). It fires once per press: release the
 button before the next long press. On each long press the sketch
 (`sketch/sketch.ino`) also notifies the Linux side (`python/main.py`), which
-makes a web request to `https://httpbin.org/get`, then takes a photo with
-the USB camera, classifies it on the board and prints both outcomes.
+takes a photo with the USB camera, classifies it on the board, then makes a
+web request to `https://httpbin.org/get`, and prints both outcomes.
 
 The blink does not depend on Linux: it comes at once, even offline or
 without a camera. Only the log tells what the request and the photo gave.
@@ -132,14 +132,20 @@ adb shell "docker logs -f my-app-main-1"            # over USB
 ssh arduino@<board-ip> "docker logs -f my-app-main-1"   # over Wi-Fi
 ```
 
-Each long press prints two lines:
+Each long press prints two lines, each starting with the board's date and
+time (the same clock as in the photo names):
 
 ```
-long press 1: GET https://httpbin.org/get -> OK, HTTP 200 (0.5 s)
-long press 1: camera sees -> water bottle 71 %, carton 12 %, pop bottle 9 % (0.9 s) [photos/20261114-153012-press1.jpg]
-long press 2: GET https://httpbin.org/get -> FAILED, <urlopen error ...> (0.0 s)
-long press 2: camera sees -> nothing above 5 % (0.9 s) [photos/20261114-153140-press2.jpg]
+2026-11-14 15:30:12 long press 1: camera sees -> water bottle 71 %, carton 12 %, pop bottle 9 % (0.9 s) [photos/20261114-153012-press1.jpg]
+2026-11-14 15:30:13 long press 1: GET https://httpbin.org/get -> OK, HTTP 200 (0.5 s)
+2026-11-14 15:31:40 long press 2: camera sees -> nothing above 5 % (0.9 s) [photos/20261114-153140-press2.jpg]
+2026-11-14 15:31:44 long press 2: GET https://httpbin.org/get -> FAILED, no answer before the deadline (4.1 s)
+2026-11-14 15:31:46 long press 3: DROPPED, waited more than 5 s for the previous one
 ```
+
+A long press gets 5 s from the moment it reaches Linux. The web request is
+cut off when they run out, and a press that waited the whole 5 s behind an
+earlier one is dropped without a photo or a request.
 
 The camera line lists the model's three most confident labels. `nothing
 above 5 %` means it recognised nothing; `FAILED` means the camera gave no
@@ -160,5 +166,5 @@ on the board, photos included. Nothing else deletes them, so clear the
 folder yourself after a long session.
 
 On the GET line, `OK` means the server answered with a 2xx status. `FAILED`
-shows the reason (no Wi-Fi, DNS, timeout after 10 s, or an HTTP error
+shows the reason (no Wi-Fi, DNS, the 5 s running out, or an HTTP error
 status). The counter starts again at 1 whenever the sketch restarts.

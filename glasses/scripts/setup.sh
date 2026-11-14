@@ -34,15 +34,30 @@ if [ ! -d "$ios/Detector.mlpackage" ] || [ ! -f "$android/detector.onnx" ]; then
   (cd "$work" && ../../.venv/bin/python ../../scripts/export_model.py "$weights")
 fi
 
-# 2. The demo video: three bottles on a table, from Intel's sample videos (CC BY 4.0).
+# 2. The demo video: separate bottles, cans and a carton on a canal bank, from Pexels.
 #    The simulated glasses of the Meta SDK on iOS play HEVC only, so it is converted.
-if [ ! -f "$ios/demo.mp4" ]; then
+source_url="https://videos.pexels.com/video-files/4855724/4855724-hd_1920_1080_25fps.mp4"
+expected_source="37afa0e829c92d2bfebdca2769650650fefadfc4eba3f286b3fb138a6ae6943b"
+stamp="$work/demo-source.sha256"
+if [ ! -f "$ios/demo.mp4" ] || [ ! -f "$stamp" ] || [ "$(cat "$stamp")" != "$expected_source" ]; then
   echo "Downloading the demo video..."
-  curl --fail --location --silent --show-error \
+  curl --fail --location --retry 8 --retry-all-errors --retry-delay 2 \
     --output "$work/demo-source.mp4" \
-    "https://github.com/intel-iot-devkit/sample-videos/raw/master/bottle-detection.mp4"
-  avconvert --source "$work/demo-source.mp4" --output "$ios/demo.mp4" \
-    --preset PresetHEVCHighestQuality --replace
+    "$source_url"
+  actual="$(shasum -a 256 "$work/demo-source.mp4" | awk '{print $1}')"
+  if [ "$actual" != "$expected_source" ]; then
+    echo "Demo video checksum mismatch: $actual" >&2
+    exit 1
+  fi
+  if command -v ffmpeg >/dev/null 2>&1; then
+    ffmpeg -y -loglevel error -i "$work/demo-source.mp4" -map 0:v:0 -an \
+      -vf scale=960:540 -c:v libx265 -tag:v hvc1 -pix_fmt yuv420p \
+      -crf 23 -preset medium -movflags +faststart -write_tmcd 0 "$ios/demo.mp4"
+  else
+    avconvert --source "$work/demo-source.mp4" --output "$ios/demo.mp4" \
+      --preset PresetHEVCHighestQuality --replace
+  fi
+  printf '%s\n' "$expected_source" > "$stamp"
 fi
 cp "$ios/demo.mp4" "$android/demo.mp4"
 

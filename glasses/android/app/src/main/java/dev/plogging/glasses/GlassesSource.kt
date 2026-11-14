@@ -154,19 +154,19 @@ class GlassesSource(private val context: Context) {
         Feed.MockPhoneCamera -> pairMockGlasses { it.setCameraFeed(CameraFacing.BACK) }
       }
 
-      // This phone can have a Ray-Ban Meta and a Meta Ray-Ban Display connected at
-      // once. The default selector takes the first connected pair, which is the
-      // folded Ray-Ban Meta, and the session then fails as device unavailable.
-      onStatus("Looking for Meta Ray-Ban Display…")
-      val selector = AutoDeviceSelector { it.deviceType == DeviceType.META_RAYBAN_DISPLAY }
+      // A connected pair wins over a bonded one that is off. Display glasses and
+      // camera glasses (Ray-Ban Meta) are both accepted.
+      onStatus("Looking for glasses…")
+      val selector = AutoDeviceSelector { it.deviceType.streamsCamera() }
       val deviceId = selector.activeDeviceFlow().filterNotNull().first()
       onStatus("Unfold the glasses and put them on…")
-      Wearables.devicesMetadata[deviceId]?.first { device ->
-        device.hingeState != HingeState.CLOSED && device.donState != DonState.DOFFED
-      }
+      val ready =
+          Wearables.devicesMetadata[deviceId]?.first { device ->
+            device.hingeState != HingeState.CLOSED && device.donState != DonState.DOFFED
+          }
 
       // 2. Open a session with them.
-      onStatus("Connecting to the glasses…")
+      onStatus("Connecting to ${ready?.name ?: "the glasses"}…")
       val opened = Wearables.createSession(selector).orThrow()
       session = opened
       launch { opened.errors.collect { onError(it.userMessage()) } }
@@ -392,6 +392,17 @@ class GlassesSource(private val context: Context) {
           onFailure = { error, _ -> throw GlassesException(error.userMessage()) },
       )
 }
+
+private fun DeviceType.streamsCamera(): Boolean =
+    when (this) {
+      DeviceType.META_RAYBAN_DISPLAY,
+      DeviceType.RAYBAN_META,
+      DeviceType.RAYBAN_META_OPTICS,
+      DeviceType.OAKLEY_META_HSTN,
+      DeviceType.OAKLEY_META_VANGUARD,
+      DeviceType.META_GLASSES -> true
+      DeviceType.UNKNOWN -> false
+    }
 
 private fun DatError.userMessage(): String {
   val raw = description

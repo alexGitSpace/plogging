@@ -22,7 +22,7 @@ You need a Mac with Python 3, and Xcode 26.4 or newer for iOS or a JDK 17 or new
 glasses/scripts/setup.sh
 ```
 
-It makes the files that are not in git: TACO YOLO11s (litter classes such as `Bottle`, `Can`, `Cigarette` and `Plastic bag & wrapper`) as `App/Resources/Detector.mlpackage` for iOS and `android/app/src/main/assets/detector.onnx` for Android, `demo.mp4` (three bottles on a table) for both, and `android/app/src/main/assets/hand_landmarker.task` for the hand skeleton on Android. The weights stay out of git: `setup.sh` downloads them.
+It makes the files that are not in git: TACO YOLO11s (litter classes such as `Bottle`, `Can`, `Cigarette` and `Plastic bag & wrapper`) as `App/Resources/Detector.mlpackage` for iOS and `android/app/src/main/assets/detector.onnx` for Android, `demo.mp4` (separate bottles, cans and a carton on a canal bank) for both, and `android/app/src/main/assets/hand_landmarker.task` for the hand skeleton on Android. The weights stay out of git: `setup.sh` downloads them.
 
 ## Sources
 
@@ -111,4 +111,4 @@ This replaces the model of both apps; no app code changes. Add `--only ios` or `
 - iOS: build with code signing on, as Xcode does by default, also for the simulator. In an unsigned build (`CODE_SIGNING_ALLOWED=NO`) the Meta SDK fails to configure and the app crashes at launch.
 - iOS: at launch the console fills with "Class ... is implemented in both MWDATMockDevice and MWDATCamera". It comes from inside the Meta SDK and is harmless.
 - Android: the model runs on ONNX Runtime with the default CPU backend, about 70 ms a frame on a four-core emulator. The XNNPACK backend was tried and was twice as slow.
-- The demo video is from [intel-iot-devkit/sample-videos](https://github.com/intel-iot-devkit/sample-videos), CC BY 4.0.
+- The demo video is [separate bottles, cans and a carton on a canal bank](https://www.pexels.com/video/wastes-on-the-canal-4855724/) from Pexels, under the Pexels License.

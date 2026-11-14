@@ -14,15 +14,18 @@ import kotlinx.coroutines.withContext
 object DemoVideo {
   private const val ASSET = "demo.mp4"
 
-  /** Copies the video out of the APK once: the players need a real file. */
+  /** Copies the video out of the APK. Replaces the cached file when the asset changed. */
   fun file(context: Context): File {
     val file = File(context.cacheDir, ASSET)
-    if (!file.exists()) {
-      try {
-        context.assets.open(ASSET).use { input -> file.outputStream().use { input.copyTo(it) } }
-      } catch (e: FileNotFoundException) {
-        throw SetupException(ASSET)
+    try {
+      context.assets.open(ASSET).use { input ->
+        val bytes = input.readBytes()
+        if (!file.exists() || file.length() != bytes.size.toLong()) {
+          file.writeBytes(bytes)
+        }
       }
+    } catch (e: FileNotFoundException) {
+      throw SetupException(ASSET)
     }
     return file
   }

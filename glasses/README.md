@@ -1,6 +1,6 @@
 # glasses
 
-Two apps, one for iOS and one for Android, that take the camera stream of Meta Ray-Ban Display glasses and run a YOLO object detector on every frame, on the phone. Later they will send a `sighting` event to the API for each piece of litter ([contract](../contract/README.md)); for now they draw the detected objects on the screen.
+Two apps, one for iOS and one for Android, that take the camera stream of Meta Ray-Ban Display glasses and run a YOLO object detector on every frame, on the phone. The Android app also sends a `sighting` event to the API for each piece of litter ([contract](../contract/README.md)).
 
 They work without glasses too: the Meta SDK can simulate a pair that plays a video or shows the phone camera.
 
@@ -64,7 +64,7 @@ If Gradle cannot find the Android SDK, put its path into `glasses/android/local.
 
 On real glasses, the steps are the same as on iOS: turn on **Developer Mode** in Meta AI, run the app on the phone, allow **Nearby devices** when Android asks, choose **Meta glasses**, then tap **Connect glasses** and confirm in Meta AI. The live view starts when the app returns registered.
 
-The Android app defaults to Meta glasses and starts the live view automatically once the app is registered. First-time registration and camera permission still require confirmation in Meta AI.
+The Android app defaults to Meta glasses and starts the live view automatically once the app is registered. First-time registration and camera permission still require confirmation in Meta AI. Starting a session also asks for location, which is attached to each `sighting`; the detector still runs if it is refused. Sightings go to `https://plogging-api.up.railway.app` unless you change the API address in the HUD menu. On an emulator, set a location in the emulator controls or the app waits for GPS.
 
 ## AI tooling
 

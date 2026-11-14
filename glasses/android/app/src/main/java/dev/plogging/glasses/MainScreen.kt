@@ -23,15 +23,19 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -52,6 +56,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -59,6 +65,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlin.math.max
 import kotlin.math.roundToInt
+import kotlinx.coroutines.delay
 
 private val Night = Color(0xFF08110E)
 private val NightSurface = Color(0xE614201A)
@@ -103,6 +110,7 @@ fun MainScreen(
 
     Column(modifier = Modifier.fillMaxSize().padding(horizontal = 18.dp, vertical = 16.dp)) {
       HudTopBar(state = state, onMenu = { menuOpen = !menuOpen })
+      PickBanner(state.lastPick)
       Spacer(Modifier.weight(1f))
       if (landscape) {
         Row(
@@ -141,6 +149,7 @@ fun MainScreen(
       MenuPanel(
           state = state,
           onSelectSource = viewModel::select,
+          onApiUrl = viewModel::setApiUrl,
           onStart = onStart,
           onStop = viewModel::stop,
           onConnect = onConnectGlasses,
@@ -218,17 +227,61 @@ private fun HudTopBar(state: UiState, onMenu: () -> Unit) {
       }
     }
 
-    Surface(
-        modifier = Modifier.size(48.dp).clickable(onClick = onMenu)
-            .semantics { contentDescription = "Open HUD menu" },
-        shape = CircleShape,
-        color = NightSurface,
-        border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.12f)),
-    ) {
-      Box(contentAlignment = Alignment.Center) {
-        Text(if (state.isRunning) "···" else "☰", color = Mist, fontSize = 21.sp, fontWeight = FontWeight.Bold)
+    Row(verticalAlignment = Alignment.CenterVertically) {
+      if (state.isRunning || state.picks > 0) {
+        Surface(
+            shape = RoundedCornerShape(50),
+            color = NightSurface,
+            border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.12f)),
+        ) {
+          Text(
+              "${state.picks} ${if (state.picks == 1) "PICK" else "PICKS"}",
+              color = Leaf,
+              fontSize = 10.sp,
+              fontWeight = FontWeight.Bold,
+              letterSpacing = 0.8.sp,
+              modifier = Modifier.padding(horizontal = 12.dp, vertical = 11.dp),
+          )
+        }
+        Spacer(Modifier.width(8.dp))
+      }
+      Surface(
+          modifier = Modifier.size(48.dp).clickable(onClick = onMenu)
+              .semantics { contentDescription = "Open HUD menu" },
+          shape = CircleShape,
+          color = NightSurface,
+          border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.12f)),
+      ) {
+        Box(contentAlignment = Alignment.Center) {
+          Text(if (state.isRunning) "···" else "☰", color = Mist, fontSize = 21.sp, fontWeight = FontWeight.Bold)
+        }
       }
     }
+  }
+}
+
+@Composable
+private fun PickBanner(lastPick: Pick?) {
+  var shown by remember { mutableStateOf<Pick?>(null) }
+  LaunchedEffect(lastPick?.t, lastPick?.label) {
+    if (lastPick == null) return@LaunchedEffect
+    shown = lastPick
+    delay(2_000)
+    if (shown == lastPick) shown = null
+  }
+  val pick = shown ?: return
+  Surface(
+      modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
+      color = Leaf,
+      shape = RoundedCornerShape(14.dp),
+  ) {
+    Text(
+        "Picked: ${pick.label}",
+        color = Night,
+        fontSize = 16.sp,
+        fontWeight = FontWeight.Bold,
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+    )
   }
 }
 
@@ -268,12 +321,21 @@ private fun DetectionHud(state: UiState, hasFrame: Boolean, modifier: Modifier =
       if (hasFrame) {
         Spacer(Modifier.height(5.dp))
         Text(
-            "${state.detectionsPerSecond} fps  ·  ${state.inferenceMilliseconds.roundToInt()} ms",
+            motionLine(state),
             color = Moss,
             fontSize = 11.sp,
             fontWeight = FontWeight.Medium,
         )
       }
+      Spacer(Modifier.height(5.dp))
+      Text(
+          reportLine(state),
+          color = if (state.reportError != null) Coral else Moss,
+          fontSize = 11.sp,
+          fontWeight = FontWeight.Medium,
+          maxLines = 1,
+          overflow = TextOverflow.Ellipsis,
+      )
     }
   }
 }
@@ -324,6 +386,7 @@ private fun PrimaryAction(
 private fun MenuPanel(
     state: UiState,
     onSelectSource: (SourceKind) -> Unit,
+    onApiUrl: (String) -> Unit,
     onStart: () -> Unit,
     onStop: () -> Unit,
     onConnect: () -> Unit,
@@ -361,6 +424,25 @@ private fun MenuPanel(
             },
         )
       }
+
+      Text("API", color = Leaf, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.4.sp)
+      OutlinedTextField(
+          value = state.apiUrl,
+          onValueChange = onApiUrl,
+          singleLine = true,
+          modifier = Modifier.fillMaxWidth(),
+          textStyle = TextStyle(color = Mist, fontSize = 13.sp),
+          colors =
+              OutlinedTextFieldDefaults.colors(
+                  focusedBorderColor = Leaf,
+                  unfocusedBorderColor = Color.White.copy(alpha = 0.16f),
+                  focusedTextColor = Mist,
+                  unfocusedTextColor = Mist,
+                  cursorColor = Leaf,
+              ),
+          keyboardOptions =
+              KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Done),
+      )
 
       Text(
           if (state.isRunning) "Stop the session before switching sources." else "Selected source: ${state.sourceKind.title}",
@@ -494,4 +576,21 @@ private fun FrameView(
 private fun colorFor(label: String): Color {
   val hue = label.fold(0) { seed, char -> (seed * 31 + char.code) % 360 }
   return Color.hsv(hue.toFloat(), 0.75f, 1f)
+}
+
+private fun reportLine(state: UiState): String {
+  val error = state.reportError
+  if (error != null) return error
+  if (state.isRunning && !state.hasLocation) return "Waiting for GPS"
+  return "${state.reportSent} sent · ${state.reportQueued} queued"
+}
+
+private fun motionLine(state: UiState): String {
+  val stats = "${state.detectionsPerSecond} fps  ·  ${state.inferenceMilliseconds.roundToInt()} ms"
+  val tilt = state.tiltDegrees
+  return when {
+    tilt != null -> "$stats  ·  tilt ${tilt.roundToInt()}°"
+    state.isRunning -> "$stats  ·  pick detection off"
+    else -> stats
+  }
 }

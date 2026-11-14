@@ -28,9 +28,14 @@ import com.meta.wearable.dat.mockdevice.api.GlassesModel
 import com.meta.wearable.dat.mockdevice.api.MockDeviceKitConfig
 import com.meta.wearable.dat.mockdevice.api.camera.CameraFacing
 import com.meta.wearable.dat.mockdevice.api.camera.MockCameraKit
+import com.meta.wearable.dat.motion.Motion
+import com.meta.wearable.dat.motion.addMotion
+import com.meta.wearable.dat.motion.types.MotionConfiguration
+import com.meta.wearable.dat.motion.types.MotionSamplingRate
 import java.nio.ByteBuffer
 import kotlin.coroutines.resume
 import kotlinx.coroutines.CancellableContinuation
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.coroutineScope
@@ -88,7 +93,8 @@ class GlassesSource(private val context: Context) {
   /**
    * Connects, starts the camera and runs until the stream ends by itself (the glasses were
    * folded or went out of range) or the caller is cancelled. Throws [GlassesException] if it
-   * cannot start. [onFrame] is called on a background thread for every frame.
+   * cannot start. [onFrame] is called on a background thread for every frame. [onMotion] is
+   * called for each accelerometer sample when the glasses allow the motion capability.
    */
   suspend fun stream(
       feed: Feed,
@@ -96,9 +102,11 @@ class GlassesSource(private val context: Context) {
       onStatus: (String) -> Unit,
       onError: (String) -> Unit,
       onFrame: (Bitmap) -> Unit,
+      onMotion: (MotionReading) -> Unit,
   ) = coroutineScope {
     var session: DeviceSession? = null
     var camera: Camera? = null
+    var motion: Motion? = null
     try {
       when (feed) {
         Feed.Glasses ->
@@ -157,6 +165,21 @@ class GlassesSource(private val context: Context) {
       }
       launch { added.stream.errorStream.collect { onError(it.userMessage()) } }
 
+      motion =
+          opened
+              .addMotion(MotionConfiguration(samplingRate = MotionSamplingRate.HZ_15))
+              .fold(onSuccess = { it }, onFailure = { _, _ -> null })
+      motion?.let { capability ->
+        launch(Dispatchers.Default, start = CoroutineStart.UNDISPATCHED) {
+          capability.samples.collect { sample ->
+            sample.accelerometer?.let { accel ->
+              onMotion(MotionReading(sample.timestampNs, accel.x, accel.y, accel.z))
+            }
+          }
+        }
+        capability.start()
+      }
+
       onStatus("Starting the camera…")
       added.stream.start().orThrow()
 
@@ -179,6 +202,7 @@ class GlassesSource(private val context: Context) {
       }
       coroutineContext.cancelChildren()
     } finally {
+      motion?.stop()
       camera?.stop()
       session?.stop()
       if (mockEnabled) {

@@ -5,6 +5,8 @@
     <uses-permission android:name="android.permission.BLUETOOTH" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <!-- Only for the "Simulated glasses: phone camera" source. -->
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
@@ -13,7 +15,8 @@
         android:allowBackup="false"
         android:label="@string/app_name"
         android:supportsRtl="true"
-        android:theme="@style/Theme.PloggingGlasses">
+        android:theme="@style/Theme.PloggingGlasses"
+        android:usesCleartextTraffic="true">
 
         <!-- Meta Wearables Device Access Toolkit. Both are "0" in Developer Mode. -->
         <meta-data

@@ -13,6 +13,7 @@ from starlette.datastructures import Headers
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from app.events import parse_event
+from app.read import read_router
 from app.store import Store
 
 MAX_BATCH = 100
@@ -95,6 +96,8 @@ def create_app(db_path: str) -> FastAPI:
     @app.get("/api/events")
     def get_events(limit: Annotated[int, Query(ge=1, le=1000)] = 20) -> EventList:
         return EventList(events=store.latest(limit))
+
+    app.include_router(read_router(store))
 
     @app.get("/", response_class=HTMLResponse, include_in_schema=False)
     def page() -> str:

@@ -46,6 +46,14 @@ class Store:
         finally:
             db.close()
 
+    def last_seq(self) -> int:
+        """Grows with every stored event, so it tells whether anything new has arrived."""
+        db = self._connect()
+        try:
+            return db.execute("SELECT COALESCE(MAX(seq), 0) FROM events").fetchone()[0]
+        finally:
+            db.close()
+
     def all(self) -> list[dict]:
         """Every event in time order: outings and stats are computed from them on each read."""
         db = self._connect()

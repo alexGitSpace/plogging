@@ -2,7 +2,7 @@
 
 Receives events from all parts ([contract](../contract/README.md)), stores them, puts picks on the route of each outing and serves the data for the interface.
 
-Now a stub: it validates and stores events and shows the latest ones. Matching picks to the route, the map and stats come next.
+It stores the events as they come and builds outings, litter spots and the leaderboard from all of them on every read, so late events land in place by themselves. The rules are in the [contract](../contract/README.md#reading) and in `app/outings.py`.
 
 ## Run locally
 
@@ -40,6 +40,10 @@ Every deploy stops the API for a few seconds: Railway never runs two copies of a
 |---|---|
 | `POST /api/events` | Events as in the contract. Each event is checked on its own: a bad one goes to `rejected` with the reason, the others are stored |
 | `GET /api/events?limit=20` | The latest events by arrival, newest first: `{"events": [...]}`, each event as in the contract. `limit` is 1 to 1000 |
+| `GET /api/spots` | Litter spots, open and cleaned |
+| `GET /api/outings` | Outings with stats; filters `user_id`, `since`, `limit` |
+| `GET /api/outings/{session_id}` | One outing with its route, picks and pinned spots |
+| `GET /api/leaderboard` | Users by picks; filter `since` |
 | `GET /` | A page with the latest 50 events, refreshed every 2 seconds |
 | `GET /docs` | OpenAPI docs |
 

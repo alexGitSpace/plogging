@@ -1,8 +1,16 @@
-# Made by scripts/setup.sh: the model and the demo video are not kept in git
+# Made by scripts/setup.sh: the models and the demo video are not kept in git
 App/Resources/*.mlpackage
 App/Resources/*.mp4
+android/app/src/main/assets/*.onnx
+android/app/src/main/assets/*.mp4
 *.pt
+*.onnx
 
 # Swift Package Manager
 .swiftpm/
 Package.resolved
+
+# Android
+android/.kotlin/
+android/captures/
+*.apk

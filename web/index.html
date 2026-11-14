@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Plogging</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+  <link rel="stylesheet" href="css/app.css">
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+  <!-- Optional local settings, not in git: see config.example.js -->
+  <script src="js/config.js" onerror="void 0"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+  <script type="module" src="js/main.js"></script>
+</head>
+<body>
+  <div class="app">
+    <nav class="sidebar">
+      <a class="brand" href="#/feed">plogging</a>
+      <div class="nav" id="nav"></div>
+      <div class="sidebar-foot">
+        <label class="you">
+          <span>You</span>
+          <select id="user-select"></select>
+        </label>
+        <div class="api-status" id="api-status"><i></i><span>API</span></div>
+      </div>
+    </nav>
+    <main id="view" class="view"></main>
+  </div>
+</body>
+</html>

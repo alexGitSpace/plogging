@@ -1,4 +1,4 @@
-# my-app
+# grabber: developer guide
 
 Hold the button for more than 1 second and the on-board RGB LED 3 blinks
 green twice (200 ms on / 200 ms off). It fires once per press: release the
@@ -13,9 +13,9 @@ without a camera. Only the log tells what the request and the photo gave.
 
 Deploy from the `projects/` directory:
 
-- over USB: `./deploy.sh my-app`
+- over USB: `./deploy.sh grabber`
 - over Wi-Fi (needed once the camera hub occupies the USB port):
-  `BOARD=arduino@<board-ip> ./deploy.sh my-app`
+  `BOARD=arduino@<board-ip> ./deploy.sh grabber`
 
 ## Wiring the button (Arduino UNO Q)
 
@@ -49,7 +49,7 @@ Safety notes:
 2. Run a male-to-male jumper from the row of one leg to `D2`.
 3. Run a male-to-male jumper from the row of the diagonally opposite leg
    (other side of the gap, other end of the button) to `GND`.
-4. Power the board, run `./deploy.sh my-app`, hold the button for 1 s.
+4. Power the board, run `./deploy.sh grabber`, hold the button for 1 s.
 
 ### Step 2: without a breadboard
 
@@ -110,7 +110,7 @@ Find its address while it is still on USB (`adb shell hostname -I`), then:
 
 ```sh
 ssh arduino@<board-ip> "ls /dev/video*"     # the webcam shows up as /dev/video0
-BOARD=arduino@<board-ip> ./deploy.sh my-app
+BOARD=arduino@<board-ip> ./deploy.sh grabber
 ```
 
 Plug the camera in before starting the app: the app opens it at start-up
@@ -129,8 +129,8 @@ but has no drink-can or paper class; those need a custom Edge Impulse model.
 On the host, follow the Python side's output:
 
 ```sh
-adb shell "docker logs -f my-app-main-1"            # over USB
-ssh arduino@<board-ip> "docker logs -f my-app-main-1"   # over Wi-Fi
+adb shell "docker logs -f grabber-main-1"            # over USB
+ssh arduino@<board-ip> "docker logs -f grabber-main-1"   # over Wi-Fi
 ```
 
 Each long press prints two lines, each starting with the board's date and
@@ -167,7 +167,7 @@ under the name shown in brackets on its log line (date-time and press
 number). Copy them to the host to look at them:
 
 ```sh
-scp -r arduino@<board-ip>:ArduinoApps/my-app/photos ./photos
+scp -r arduino@<board-ip>:ArduinoApps/grabber/photos ./photos
 ```
 
 Copy them before the next deploy: `deploy.sh` replaces the whole app folder

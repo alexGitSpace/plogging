@@ -35,6 +35,13 @@ class MainActivity : ComponentActivity() {
         phoneCameraWaiting = null
       }
 
+  private var locationWaiting: CancellableContinuation<Boolean>? = null
+  private val location =
+      registerForActivityResult(RequestPermission()) { granted ->
+        locationWaiting?.resume(granted)
+        locationWaiting = null
+      }
+
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     glassesCamera = GlassesCameraPermission(this)
@@ -57,7 +64,9 @@ class MainActivity : ComponentActivity() {
       ) {
         MainScreen(
             viewModel = viewModel,
-            onStart = { viewModel.start(glassesCamera::request, ::requestPhoneCamera) },
+            onStart = {
+              viewModel.start(glassesCamera::request, ::requestPhoneCamera, ::requestLocation)
+            },
             onConnectGlasses = { viewModel.connectGlasses(this) },
             onDisconnectGlasses = { viewModel.disconnectGlasses(this) },
         )
@@ -91,6 +100,22 @@ class MainActivity : ComponentActivity() {
       phoneCameraWaiting = waiting
       waiting.invokeOnCancellation { phoneCameraWaiting = null }
       phoneCamera.launch(Manifest.permission.CAMERA)
+    }
+  }
+
+  /** Asks Android for this phone's position. Detection still runs if it is refused. */
+  private suspend fun requestLocation(): Boolean {
+    val fine =
+        ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) ==
+            PackageManager.PERMISSION_GRANTED
+    val coarse =
+        ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) ==
+            PackageManager.PERMISSION_GRANTED
+    if (fine || coarse) return true
+    return suspendCancellableCoroutine { waiting ->
+      locationWaiting = waiting
+      waiting.invokeOnCancellation { locationWaiting = null }
+      location.launch(Manifest.permission.ACCESS_FINE_LOCATION)
     }
   }
 }

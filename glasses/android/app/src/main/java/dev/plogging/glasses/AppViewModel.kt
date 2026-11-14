@@ -3,6 +3,8 @@ package dev.plogging.glasses
 import android.app.Activity
 import android.app.Application
 import android.graphics.Bitmap
+import android.media.AudioManager
+import android.media.ToneGenerator
 import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -47,6 +49,14 @@ data class UiState(
     val inferenceMilliseconds: Float = 0f,
     val glassesRegistered: Boolean = false,
     val errorMessage: String? = null,
+    val reportSent: Int = 0,
+    val reportQueued: Int = 0,
+    val reportError: String? = null,
+    val hasLocation: Boolean = false,
+    val apiUrl: String = DEFAULT_API_URL,
+    val picks: Int = 0,
+    val lastPick: Pick? = null,
+    val tiltDegrees: Float? = null,
 ) {
   /** Glasses mode needs the app to be registered with the Meta AI app first. */
   val needsRegistration: Boolean
@@ -64,9 +74,32 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
   val frame: StateFlow<Bitmap?> = _frame.asStateFlow()
 
   private val glasses = GlassesSource(application)
+  private val location = PhoneLocation(application)
+  private val reporter = SightingReporter(application)
   private var glassesReady = false
   private var detector: ObjectDetector? = null
+  private var pickDetector = PickDetector()
+  private var tone: ToneGenerator? = null
   private var run: Job? = null
+
+  init {
+    _uiState.update { it.copy(apiUrl = reporter.apiUrl) }
+    reporter.start(viewModelScope)
+    viewModelScope.launch {
+      reporter.status.collect { report ->
+        _uiState.update {
+          it.copy(
+              reportSent = report.sent,
+              reportQueued = report.queued,
+              reportError = report.error,
+          )
+        }
+      }
+    }
+    viewModelScope.launch {
+      location.fix.collect { fix -> _uiState.update { it.copy(hasLocation = fix != null) } }
+    }
+  }
 
   // Holds one waiting frame. While the detector is busy, a newer frame replaces it,
   // so detection never falls behind the camera.
@@ -101,20 +134,35 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
   /**
    * @param requestGlassesCamera asks for the camera of the glasses in the Meta AI app.
    * @param requestPhoneCamera asks Android for the camera of this phone.
+   * @param requestLocation asks Android for this phone's position, used on each sighting.
    */
   fun start(
       requestGlassesCamera: suspend () -> Boolean,
       requestPhoneCamera: suspend () -> Boolean,
+      requestLocation: suspend () -> Boolean,
   ) {
     if (_uiState.value.isRunning) return
     val kind = _uiState.value.sourceKind
-    _uiState.update { it.copy(isRunning = true, errorMessage = null, status = "Loading the model…") }
+    pickDetector = PickDetector()
+    _uiState.update {
+      it.copy(
+          isRunning = true,
+          errorMessage = null,
+          status = "Loading the model…",
+          picks = 0,
+          lastPick = null,
+          tiltDegrees = null,
+      )
+    }
 
     run = viewModelScope.launch {
       var endStatus = "Stopped"
       var detecting: Job? = null
       try {
         val detector = loadDetector()
+        requestLocation()
+        location.start()
+        reporter.beginSession()
         detecting = launch(Dispatchers.Default) { pendingFrames.collect { detect(it, detector) } }
 
         val onFrame: (Bitmap) -> Unit = { frame ->
@@ -146,6 +194,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
               onStatus = ::status,
               onError = { message -> _uiState.update { it.copy(errorMessage = message) } },
               onFrame = onFrame,
+              onMotion = ::onMotion,
           )
           endStatus = "The stream ended"
         }
@@ -156,8 +205,9 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         endStatus = "Failed"
         _uiState.update { it.copy(errorMessage = e.message ?: e.toString()) }
       } finally {
-        // The detector loop never ends by itself.
         detecting?.cancel()
+        location.stop()
+        reporter.endSession()
         _frame.value = null
         _uiState.update {
           it.copy(
@@ -165,6 +215,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
               status = endStatus,
               detections = emptyList(),
               detectionsPerSecond = 0,
+              tiltDegrees = null,
           )
         }
       }
@@ -189,6 +240,11 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     _uiState.update { it.copy(errorMessage = null) }
   }
 
+  fun setApiUrl(value: String) {
+    reporter.updateApiUrl(value)
+    _uiState.update { it.copy(apiUrl = value) }
+  }
+
   // MARK: Private
 
   private val resultTimes = ArrayDeque<Long>()
@@ -202,14 +258,40 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     resultTimes.addLast(now)
     while (now - resultTimes.first() > 1_000_000_000L) resultTimes.removeFirst()
 
+    reporter.note(detections, location.fix.value, System.currentTimeMillis())
+    val pick = pickDetector.onDetections(detections, System.currentTimeMillis())
+
     _uiState.update {
       if (!it.isRunning) return@update it
       it.copy(
           detections = detections,
           detectionsPerSecond = resultTimes.size,
           inferenceMilliseconds = (now - startedAt) / 1_000_000f,
+          picks = if (pick != null) it.picks + 1 else it.picks,
+          lastPick = pick ?: it.lastPick,
       )
     }
+    if (pick != null) playPickTone()
+  }
+
+  private fun onMotion(reading: MotionReading) {
+    val pick = pickDetector.onMotion(reading, System.currentTimeMillis())
+    _uiState.update {
+      if (!it.isRunning) return@update it
+      it.copy(
+          tiltDegrees = pickDetector.tiltDegrees,
+          picks = if (pick != null) it.picks + 1 else it.picks,
+          lastPick = pick ?: it.lastPick,
+      )
+    }
+    if (pick != null) playPickTone()
+  }
+
+  private fun playPickTone() {
+    try {
+      val generator = tone ?: ToneGenerator(AudioManager.STREAM_NOTIFICATION, 80).also { tone = it }
+      generator.startTone(ToneGenerator.TONE_PROP_ACK, 180)
+    } catch (_: RuntimeException) {}
   }
 
   private suspend fun loadDetector(): ObjectDetector =
@@ -225,6 +307,10 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
   }
 
   override fun onCleared() {
+    location.stop()
+    reporter.endSession()
     detector?.close()
+    tone?.release()
+    tone = null
   }
 }

@@ -42,10 +42,12 @@ export default async function render(el) {
 
   // ---- You on the map: a blue dot with its accuracy circle ----
 
-  const meCircle = L.circle([0, 0], { radius: 1, color: "#2f80ed", weight: 1, fillOpacity: 0.1, interactive: false });
+  // The circle shows GPS accuracy; capped at 25 m so a poor fix does not cover the spots around you.
+  const ME_CIRCLE_MAX_M = 25;
+  const meCircle = L.circle([0, 0], { radius: 1, stroke: false, fillColor: "#2f80ed", fillOpacity: 0.06, interactive: false });
   const meDot = L.circleMarker([0, 0], { radius: 8, color: "#fff", weight: 3, fillColor: "#2f80ed", fillOpacity: 1, interactive: false });
   function showMe(lat, lon, accuracy) {
-    meCircle.setLatLng([lat, lon]).setRadius(accuracy).addTo(map);
+    meCircle.setLatLng([lat, lon]).setRadius(Math.min(accuracy, ME_CIRCLE_MAX_M)).addTo(map);
     meDot.setLatLng([lat, lon]).addTo(map);
   }
 

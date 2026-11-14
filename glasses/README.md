@@ -48,7 +48,7 @@ The first build downloads the Meta SDK as a Swift package. Choose an iPhone simu
 On real glasses:
 
 1. In Xcode, select the PloggingGlasses target, then Signing & Capabilities: choose your team and change the bundle identifier to your own.
-2. Pair the glasses with the Meta AI app on the iPhone. In Meta AI, open Settings, your glasses, and turn on **Developer Mode**. It turns itself off after a firmware update.
+2. Pair the glasses with the Meta AI app on the iPhone and turn on **Developer Mode** in Meta AI (see below).
 3. Run the app on the iPhone, choose **Meta glasses** and tap **Connect glasses**. Meta AI opens: confirm, and it returns to the app.
 4. Put the glasses on and press **Start**. The first time, Meta AI asks to allow the camera.
 
@@ -67,6 +67,10 @@ On real glasses, the steps are the same as on iOS: turn on **Developer Mode** in
 Give the emulator several CPU cores, or detection crawls: start it with `emulator -avd <name> -cores 4`.
 
 ## Developer Mode and keys
+
+To turn on Developer Mode, open the Meta AI app, go to Settings, then App Info, and tap the **App version** number five times. A Developer Mode switch appears: turn it on and confirm. It can turn itself off after a firmware update.
+
+Without it, **Connect glasses** ends in Meta AI with "Error opening link": Meta AI refuses to register an app that has no app ID unless Developer Mode is on.
 
 Developer Mode needs no keys. To share an app through a release channel, create a project in the [Wearables Developer Center](https://wearables.developer.meta.com/) and pass its values from outside git: on iOS as the Xcode build settings `META_APP_ID` and `CLIENT_TOKEN`, on Android as `./gradlew installDebug -Pmwdat_application_id=... -Pmwdat_client_token=...`.
 

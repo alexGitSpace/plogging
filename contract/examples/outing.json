@@ -1,0 +1,66 @@
+{
+  "events": [
+    {
+      "event_id": "f3f49249-dc28-4f90-a5ae-c7978306d03b",
+      "type": "session.start",
+      "device_id": "phone-1",
+      "t": 1794654000000,
+      "session_id": "f38b2ffc-80a4-4f5a-91c9-bc701e7ea419",
+      "user_id": "user-1",
+      "role": "plogger",
+      "device_ids": ["grabber-1"]
+    },
+    {
+      "event_id": "6bad6be2-8e7a-46e9-9f19-950499dd251d",
+      "type": "sighting",
+      "device_id": "glasses-1",
+      "t": 1794654042000,
+      "lat": 60.18431,
+      "lon": 24.83023,
+      "litter_type": "bottle",
+      "confidence": 0.88
+    },
+    {
+      "event_id": "e5121482-3929-4d22-a255-accb1a466884",
+      "type": "track.points",
+      "device_id": "phone-1",
+      "t": 1794654050000,
+      "session_id": "f38b2ffc-80a4-4f5a-91c9-bc701e7ea419",
+      "points": [
+        {"t": 1794654000000, "lat": 60.1841, "lon": 24.8301, "accuracy": 5.0},
+        {"t": 1794654010000, "lat": 60.18415, "lon": 24.83013, "accuracy": 5.0},
+        {"t": 1794654020000, "lat": 60.1842, "lon": 24.83016, "accuracy": 5.0},
+        {"t": 1794654030000, "lat": 60.18425, "lon": 24.83019, "accuracy": 5.0},
+        {"t": 1794654040000, "lat": 60.1843, "lon": 24.83022, "accuracy": 5.0},
+        {"t": 1794654050000, "lat": 60.18435, "lon": 24.83025, "accuracy": 5.0}
+      ]
+    },
+    {
+      "event_id": "d7a7a3cc-8c3d-4f16-9293-de8fc88b2875",
+      "type": "pick",
+      "device_id": "grabber-1",
+      "t": 1794654065000,
+      "confidence": 0.93
+    },
+    {
+      "event_id": "7dabe929-c4a3-44bf-86cd-75e9bb049a79",
+      "type": "track.points",
+      "device_id": "phone-1",
+      "t": 1794654090000,
+      "session_id": "f38b2ffc-80a4-4f5a-91c9-bc701e7ea419",
+      "points": [
+        {"t": 1794654060000, "lat": 60.1844, "lon": 24.83028, "accuracy": 5.0},
+        {"t": 1794654070000, "lat": 60.18445, "lon": 24.83031, "accuracy": 5.0},
+        {"t": 1794654080000, "lat": 60.1845, "lon": 24.83034, "accuracy": 5.0},
+        {"t": 1794654090000, "lat": 60.18455, "lon": 24.83037, "accuracy": 5.0}
+      ]
+    },
+    {
+      "event_id": "70eb9a0a-9626-4ae6-85e8-18fac0433cbd",
+      "type": "session.end",
+      "device_id": "phone-1",
+      "t": 1794654120000,
+      "session_id": "f38b2ffc-80a4-4f5a-91c9-bc701e7ea419"
+    }
+  ]
+}

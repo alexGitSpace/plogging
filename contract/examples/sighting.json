@@ -1,0 +1,14 @@
+{
+  "events": [
+    {
+      "event_id": "6bad6be2-8e7a-46e9-9f19-950499dd251d",
+      "type": "sighting",
+      "device_id": "glasses-1",
+      "t": 1794654042000,
+      "lat": 60.18431,
+      "lon": 24.83023,
+      "litter_type": "bottle",
+      "confidence": 0.88
+    }
+  ]
+}

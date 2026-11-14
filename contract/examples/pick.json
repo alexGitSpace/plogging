@@ -1,0 +1,11 @@
+{
+  "events": [
+    {
+      "event_id": "d7a7a3cc-8c3d-4f16-9293-de8fc88b2875",
+      "type": "pick",
+      "device_id": "grabber-1",
+      "t": 1794654065000,
+      "confidence": 0.93
+    }
+  ]
+}

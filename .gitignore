@@ -1,0 +1,30 @@
+# Keys live in environment variables, never in git
+.env
+.env.*
+*.pem
+*.key
+
+# Dependencies and build output
+__pycache__/
+.venv/
+node_modules/
+dist/
+build/
+.build/
+.gradle/
+DerivedData/
+xcuserdata/
+local.properties
+
+# Local databases and media
+*.db
+*.sqlite
+*.mp4
+*.mov
+*.MOV
+
+# Personal settings
+.DS_Store
+.idea/
+.vscode/
+.claude/settings.local.json

@@ -8,12 +8,6 @@ Built at [Junction 2026](https://2026.hackjunction.com), 13–15 November 2026, 
 
 Strava for [plogging](https://en.wikipedia.org/wiki/Plogging), that is, picking up litter while you walk or run. Scouts' Meta glasses pin litter on the map; ploggers pick it up and clear it. Any device can report a pick; ours is a grabber that counts every item and, like the glasses, tells its type by camera. The phone records the route, and every outing becomes stats to share and compete on.
 
-## Demo
-
-[![Plokka demo video](https://img.youtube.com/vi/fIfEOPphNNs/maxresdefault.jpg)](https://youtu.be/fIfEOPphNNs)
-
-▶️ [Watch the demo on YouTube](https://youtu.be/fIfEOPphNNs)
-
 ## How it works
 
 ```mermaid

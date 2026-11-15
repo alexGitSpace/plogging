@@ -1,6 +1,8 @@
-![Three women on a shoreline: smart glasses spot the litter, a grabber picks it up, a bag collects it](assets/cover.jpg)
+[![Three women on a shoreline: smart glasses spot the litter, a grabber picks it up, a bag collects it](assets/cover.jpg)](https://www.youtube.com/watch?v=fIfEOPphNNs)
 
 # Plokka
+
+### ▶️ [Watch the demo video on YouTube](https://www.youtube.com/watch?v=fIfEOPphNNs)
 
 Built at [Junction 2026](https://2026.hackjunction.com), 13–15 November 2026, Espoo.
 

@@ -8,6 +8,8 @@
 
 <p align="center"><em>Left: the phone, live from real glasses, spotting a cup in someone's hand. Right: the card the glasses display shows, here on the demo video.</em></p>
 
+<p align="center"><strong>▶️ <a href="https://www.youtube.com/watch?v=fIfEOPphNNs">Watch the whole thing in action on YouTube</a></strong></p>
+
 You walk around in your Meta glasses, the phone in your pocket watches the camera stream, and every time a bottle, a can or a wrapper shows up, it gets noticed, pinned on the map and, if you pick it up, counted. That's the whole idea.
 
 The detecting runs on the phone itself. Every frame from the glasses goes through a small YOLO model trained on litter, no cloud needed. The cloud only gets the result: a `sighting` for each piece of litter ([contract](../contract/README.md)).

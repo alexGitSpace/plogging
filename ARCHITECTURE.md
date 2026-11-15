@@ -1,6 +1,6 @@
 # Architecture
 
-How Plokka is built. Status as of Sunday 15 November 2026, before the submission.
+How Plokka is built.
 
 ```mermaid
 flowchart LR
@@ -16,15 +16,15 @@ Every part talks only to the API. The events and the read endpoints are in the [
 
 ## Modules
 
-| Module | Folder | What it does | Status |
-|---|---|---|---|
-| Contract | `contract/` | Event format and read endpoints | Done |
-| API | `api/` | Stores events; builds outings, spots and the leaderboard on every read | Done, deployed |
-| Simulator | `api/sim.py` | Sends made-up or recorded outings, for the demo without hardware | Done |
-| Grabber | `grabber/` | Recognises the picked item by camera and sends `pick` | Sends `pick` to the API |
-| Glasses app | `glasses/` | Streams the glasses camera to the phone, runs YOLO, sends `sighting` with the phone's location | Android: sends `sighting`, shows litter on the Meta Ray-Ban Display. iOS: detection on screen, no sending |
-| Outing recorder | `web/` (`js/recorder.js`) | Records the outing on the map, like Strava: start, pause, finish, the GPS track | Done. The API's `/record` page is the older fallback |
-| Web app | `web/` | Map, outings, stats, quests, leaderboard, profile | Done, deployed |
+| Module | Folder | What it does |
+|---|---|---|
+| Contract | `contract/` | Event format and read endpoints |
+| API | `api/` | Stores events; builds outings, spots and the leaderboard on every read |
+| Simulator | `api/sim.py` | Sends made-up or recorded outings, for the demo without hardware |
+| Grabber | `grabber/` | Recognises the picked item by camera and sends `pick` |
+| Glasses app | `glasses/` | Streams the glasses camera to the phone, runs YOLO, sends `sighting` with the phone's location. On Android it also shows litter on the Meta Ray-Ban Display; the iOS app only detects on screen and sends nothing |
+| Outing recorder | `web/` (`js/recorder.js`) | Records the outing on the map, like Strava: start, pause, finish, the GPS track. The API's `/record` page is the older fallback |
+| Web app | `web/` | Map, outings, stats, quests, leaderboard, profile |
 
 ### Web app: front end and back end
 

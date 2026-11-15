@@ -4,6 +4,8 @@
 
 ### ▶️ [Watch the demo video on YouTube](https://www.youtube.com/watch?v=fIfEOPphNNs)
 
+📱 [Download the glasses app for Android](https://github.com/alexGitSpace/plokka/releases/latest/download/plogging-glasses.apk) (APK, for Meta glasses or without them)
+
 Built at [Junction 2026](https://2026.hackjunction.com), 13–15 November 2026, Espoo.
 
 Strava for [plogging](https://en.wikipedia.org/wiki/Plogging), that is, picking up litter while you walk or run. Scouts' Meta glasses pin litter on the map; ploggers pick it up and clear it. Any device can report a pick; ours is a grabber that counts every item and, like the glasses, tells its type by camera. The phone records the route, and every outing becomes stats to share and compete on.

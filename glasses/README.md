@@ -1,12 +1,16 @@
 # glasses
 
+<p align="center">
+  <img src="docs/phone-hud.jpg" height="300" alt="The phone app on the live stream from real Meta glasses, with a paper cup in a box at 97%">
+  &nbsp;
+  <img src="docs/glasses-card.jpg" height="300" alt="The glasses card over the demo video: a cup on a canal bank, outlined, on your right">
+</p>
+
+<p align="center"><em>Left: the phone, live from real glasses, spotting a cup in someone's hand. Right: the card the glasses display shows, here on the demo video.</em></p>
+
 You walk around in your Meta glasses, the phone in your pocket watches the camera stream, and every time a bottle, a can or a wrapper shows up, it gets noticed, pinned on the map and, if you pick it up, counted. That's the whole idea.
 
 The detecting runs on the phone itself. Every frame from the glasses goes through a small YOLO model trained on litter, no cloud needed. The cloud only gets the result: a `sighting` for each piece of litter ([contract](../contract/README.md)).
-
-![The phone app on real glasses footage: a cup, a wrapper and a carton on a hackathon desk, each in its own box](docs/phone-hud.jpg)
-
-*What the phone shows while you wear the glasses. That's our messy hackathon table, which turned out to be a great test set.*
 
 ## What it does
 
@@ -17,10 +21,6 @@ The detecting runs on the phone itself. Every frame from the glasses goes throug
 - **Keeps you company.** A calm ElevenLabs voice says hi when you start, says something nice when you pick, and now and then reminds you that you're doing a good thing. It falls back to a beep without a key.
 - **Pins it on the map.** Each sighting carries the phone's location, so other people can see where the litter is.
 - **Records the whole thing.** The record button saves the glasses camera with the card on top to `Movies/Plogging`, since the glasses don't send their own screen back.
-
-![Real glasses footage on a city street, with the card from the glasses display drawn over it](docs/glasses-card.jpg)
-
-*The card on the glasses, drawn over real footage from a walk outside. Honest note: the "bottle" is a rock. The bottle cap next to it is real, though. The model is good but it's not a wizard.*
 
 ## Two apps
 
@@ -123,7 +123,7 @@ cd glasses/Detection
 swift run detect-video --model ../App/Resources/Detector.mlpackage --video ../App/Resources/demo.mp4 --annotate frame.png
 ```
 
-It prints what it finds in each frame and saves the busiest frame, with boxes, to `frame.png`. Use `--output glasses.mp4` instead to get the whole video with the glasses card drawn on every frame. That's how the street picture above was made.
+It prints what it finds in each frame and saves the busiest frame, with boxes, to `frame.png`. Use `--output glasses.mp4` instead to get the whole video with the glasses card drawn on every frame. That's how the canal picture at the top was made.
 
 ## Swapping the model
 
